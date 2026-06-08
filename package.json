@@ -1,0 +1,40 @@
+{
+  "name": "vankatum",
+  "version": "0.0.0",
+  "description": "Reliable Armenian (hy) hyphenation for browsers and typesetting — syllabification-based, both Eastern and Western variants.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "armenian",
+    "hyphenation",
+    "syllabification",
+    "hy",
+    "typesetting",
+    "hyphen",
+    "tex"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "docs/SPEC.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "fast-check": "^4.8.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
