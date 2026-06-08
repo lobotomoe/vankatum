@@ -56,6 +56,12 @@ words="$(grep -c . "$DICT")"
 } >"$TEX"
 rm -f "$raw"
 
-echo "[4/4] verify reproduction vs engine"
+echo "[4/5] verify reproduction vs engine"
 node tools/emit/verify.mjs "$TEX" "$DICT"
-echo "-> $TEX"
+
+echo "[5/5] derive downstream artifacts (.dic, hypher .json, .hyb)"
+node tools/emit/derive.mjs "$TEX" "$OUT_DIR"
+python3 tools/emit/vendor/mk_hyb_file.py "$OUT_DIR/hyph-hy.pat.txt" "$OUT_DIR/hyph-hy.hyb"
+
+echo "artifacts in $OUT_DIR/:"
+ls -1 "$OUT_DIR"

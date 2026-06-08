@@ -120,3 +120,10 @@ authoritative reference for anyone who can run it.
 - The reference pattern files are LGPL/MIT/BSD — used only for *analysis and
   benchmarking*, never vendored into the shipped library. vankatum's algorithm is
   independent (rule-based), not derived from the `hyph-hy` patterns.
+- **`mk_hyb_file.py`** (AOSP Minikin) is vendored at `tools/emit/vendor/` under
+  **Apache-2.0** (license header preserved) — it converts our generated patterns
+  to the Chromium `.hyb` binary; it is a build tool, not shipped in the package.
+- **`corpus/wordlist.txt`** (committed) holds only bare lowercase words (ARLIS +
+  Wiktionary headwords) — facts, no hyphenations or act text — so it is safe to
+  commit and is the reproducible input for CI pattern builds. Generated artifacts
+  (`artifacts/`) are gitignored release outputs.

@@ -12,33 +12,19 @@
 
 import { readFile } from "node:fs/promises";
 import { compile, breakOffsets } from "./liang.mjs";
+import { parseTex, offsetsFromMarked } from "./tex.mjs";
 
 const APPLY_OPTS = { leftmin: 1, rightmin: 1 };
-
-function block(tex, name) {
-  const m = tex.match(new RegExp(`\\\\${name}\\{([\\s\\S]*?)\\n\\}`));
-  return m ? m[1].split("\n").map((l) => l.trim()).filter(Boolean) : [];
-}
-
-/** Offsets of "-" markers in a hyphen-marked word, as codepoint indices. */
-function offsetsFromMarked(marked) {
-  const offsets = [];
-  let idx = 0;
-  for (const ch of marked) {
-    if (ch === "-") offsets.push(idx);
-    else idx++;
-  }
-  return offsets;
-}
 
 async function main() {
   const [texPath, dictPath] = process.argv.slice(2);
   if (!texPath || !dictPath) throw new Error("usage: verify.mjs <patterns.tex> <dictionary.txt>");
 
   const tex = await readFile(texPath, "utf8");
-  const patterns = compile(block(tex, "patterns"));
+  const parsed = parseTex(tex);
+  const patterns = compile(parsed.patterns);
   const exceptions = new Map();
-  for (const marked of block(tex, "hyphenation")) {
+  for (const marked of parsed.exceptions) {
     exceptions.set(marked.replaceAll("-", ""), offsetsFromMarked(marked));
   }
 

@@ -12,15 +12,14 @@
  * Output: playground/corpus/dictionary.txt
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { breakPoints } from "../../dist/index.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../..");
-const ARLIS_WORDLIST = join(ROOT, "playground/corpus/arlis/wordlist.txt");
-const WIKTIONARY_TSV = join(ROOT, "playground/reference/wiktionary/wiktionary-hy.tsv");
+const WORDLIST = join(ROOT, "corpus/wordlist.txt");
 const OUT = join(ROOT, "playground/corpus/dictionary.txt");
 
 // Lowercase Armenian word, at least two letters (shorter words never break).
@@ -43,35 +42,20 @@ function mark(word) {
   return out.join("");
 }
 
-async function readLines(path) {
-  try {
-    return (await readFile(path, "utf8")).split("\n");
-  } catch {
-    return [];
-  }
-}
-
 async function main() {
-  const vocab = new Set();
-
-  // ARLIS: one word per line.
-  for (const line of await readLines(ARLIS_WORDLIST)) {
-    const w = line.trim().toLowerCase();
-    if (VALID.test(w)) vocab.add(w);
+  let raw;
+  try {
+    raw = await readFile(WORDLIST, "utf8");
+  } catch {
+    throw new Error(`missing ${WORDLIST} — run tools/corpus/build-wordlist.mjs first`);
   }
 
-  // Wiktionary: first TSV column is the headword.
-  for (const line of await readLines(WIKTIONARY_TSV)) {
-    const [word] = line.split("\t");
-    const w = (word ?? "").trim().toLowerCase();
-    if (VALID.test(w)) vocab.add(w);
-  }
+  const words = raw
+    .split("\n")
+    .map((w) => w.trim())
+    .filter((w) => VALID.test(w));
 
-  if (vocab.size === 0) {
-    throw new Error("empty corpus — run tools/corpus/fetch-arlis.mjs first");
-  }
-
-  const words = [...vocab].sort((a, b) => a.localeCompare(b, "hy"));
+  if (words.length === 0) throw new Error(`no valid words in ${WORDLIST}`);
   let withBreak = 0;
   let totalBreaks = 0;
   const lines = words.map((w) => {
@@ -82,6 +66,7 @@ async function main() {
     return marked;
   });
 
+  await mkdir(dirname(OUT), { recursive: true });
   await writeFile(OUT, lines.join("\n") + "\n", "utf8");
   console.log(`corpus words: ${words.length}`);
   console.log(`with >=1 break: ${withBreak} (${((100 * withBreak) / words.length).toFixed(1)}%)`);
