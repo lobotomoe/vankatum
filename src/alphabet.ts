@@ -25,7 +25,7 @@ export interface Unit {
   kind: UnitKind;
 }
 
-const isArmenianLetter = (ch: string): boolean => {
+export const isArmenianLetter = (ch: string): boolean => {
   const code = ch.codePointAt(0) ?? 0;
   // uppercase Ա–Ֆ, lowercase ա–ֆ, ligature և, plus ֈ
   return (
