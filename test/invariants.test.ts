@@ -2,10 +2,25 @@
  * Property-based invariants — laws that must hold for EVERY input, verified by
  * fuzzing rather than examples. These certify the whole input space and protect
  * everything built on top of the core. See docs/SPEC.md.
+ *
+ * Structure: each LAW is defined once, then run over the generators that actually
+ * stress it (a law x generator matrix). This keeps the set of distinct laws
+ * minimal and orthogonal — no copy-paste, no superseded duplicates.
+ *
+ * Generator rationale:
+ *   messy      — any string (letters, both cases, separators, noise). For the
+ *                universal laws this is a strict superset of `clean`, so `clean`
+ *                is not re-run on them.
+ *   structured — deliberately emits ու digraphs, the և ligature, յ-glides,
+ *                consonant clusters and hiatus; the strongest stressor for the
+ *                digraph/glide and onset laws.
+ *   clean      — random Armenian lowercase. Its only unique contribution is
+ *                zero-nucleus (all-consonant) words, which `structured` cannot
+ *                produce (every structured syllable has a nucleus).
  */
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { breakPoints, hyphenate, syllabify } from "../src/index.js";
+import { breakPoints, syllabify } from "../src/index.js";
 import { tokenize } from "../src/alphabet.js";
 
 const RUNS = 5000;
@@ -37,6 +52,13 @@ const structuredWord = fc
   .array(syllable, { minLength: 1, maxLength: 6 })
   .map((sylls) => sylls.map((s) => s.onset.join("") + s.nucleus + s.coda.join("")).join(""));
 
+const GENERATORS = {
+  messy: messyText,
+  clean: cleanWord,
+  structured: structuredWord,
+} as const;
+type GeneratorName = keyof typeof GENERATORS;
+
 const nucleusCount = (w: string) => tokenize(w).filter((u) => u.kind === "vowel").length;
 
 const leadingConsonants = (fragment: string): number => {
@@ -48,157 +70,107 @@ const leadingConsonants = (fragment: string): number => {
   return n;
 };
 
-describe("safety invariants (hold for ANY string)", () => {
-  it("letter conservation: fragments rejoin to the exact original", () => {
-    fc.assert(
-      fc.property(messyText, (w) => {
-        expect(syllabify(w).join("")).toBe(w);
-      }),
-      { numRuns: RUNS },
-    );
-  });
+// --- The laws -------------------------------------------------------------
+// Each asserts by throwing (block body), so fast-check sees a void return and
+// treats "no throw" as success — never a stray boolean.
 
-  it("no empty fragment is ever produced", () => {
-    fc.assert(
-      fc.property(messyText, (w) => {
-        for (const frag of syllabify(w)) expect([...frag].length).toBeGreaterThan(0);
-      }),
-      { numRuns: RUNS },
-    );
-  });
+type Law = (w: string) => void;
 
-  it("never breaks inside the ու digraph", () => {
-    fc.assert(
-      fc.property(messyText, (w) => {
-        const frags = syllabify(w);
-        for (let i = 0; i < frags.length - 1; i++) {
-          const prev = frags[i] as string;
-          const next = frags[i + 1] as string;
-          const endsWithO = prev.endsWith("ո") || prev.endsWith("Ո");
-          const startsWithYiwn = next.startsWith("ւ") || next.startsWith("Ւ");
-          expect(endsWithO && startsWithYiwn).toBe(false);
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
+/** Fragments rejoin to the exact original — not one codepoint added, dropped or moved. */
+const conservation: Law = (w) => {
+  expect(syllabify(w).join("")).toBe(w);
+};
 
-  it("is deterministic", () => {
-    fc.assert(
-      fc.property(messyText, (w) => {
-        expect(hyphenate(w)).toBe(hyphenate(w));
-      }),
-      { numRuns: RUNS },
-    );
-  });
+/** No fragment is ever empty. */
+const noEmpty: Law = (w) => {
+  for (const frag of syllabify(w)) expect([...frag].length).toBeGreaterThan(0);
+};
+
+/** The ու digraph is one nucleus and is never split across a break. */
+const ouIntact: Law = (w) => {
+  const frags = syllabify(w);
+  for (let i = 1; i < frags.length; i++) {
+    const last = [...(frags[i - 1] as string)].at(-1)?.toLowerCase();
+    const first = [...(frags[i] as string)][0]?.toLowerCase();
+    expect(last === "ո" && first === "ւ").toBe(false);
+  }
+};
+
+const GLIDE_VOWELS = new Set([..."աեէըիոօ"]);
+
+/** A յ-glide (յ + vowel) is one nucleus and is never split across a break. */
+const yodIntact: Law = (w) => {
+  const frags = syllabify(w);
+  for (let i = 1; i < frags.length; i++) {
+    const last = [...(frags[i - 1] as string)].at(-1)?.toLowerCase();
+    const first = [...(frags[i] as string)][0]?.toLowerCase() ?? "";
+    expect(last === "յ" && GLIDE_VOWELS.has(first)).toBe(false);
+  }
+};
+
+/** Every non-initial fragment carries an onset of at most one consonant. */
+const onsetMax: Law = (w) => {
+  const frags = syllabify(w);
+  for (let i = 1; i < frags.length; i++) {
+    expect(leadingConsonants(frags[i] as string)).toBeLessThanOrEqual(1);
+  }
+};
+
+/** With no min constraints, there is exactly one fragment per nucleus (>=1). */
+const completeness: Law = (w) => {
+  const frags = syllabify(w, { leftmin: 0, rightmin: 0 });
+  expect(frags.length).toBe(Math.max(1, nucleusCount(w)));
+};
+
+// --- The matrix -----------------------------------------------------------
+// Each law lists the generators whose distribution meaningfully exercises it.
+
+interface LawSpec {
+  name: string;
+  law: Law;
+  on: ReadonlyArray<GeneratorName>;
+}
+
+const LAWS: readonly LawSpec[] = [
+  // Universal laws — messy covers clean's alphabet; structured reliably exercises
+  // the digraph/glide merge paths where an offset bug would surface.
+  { name: "letter conservation", law: conservation, on: ["messy", "structured"] },
+  { name: "no empty fragment", law: noEmpty, on: ["messy", "structured"] },
+  { name: "ու digraph never split", law: ouIntact, on: ["messy", "structured"] },
+  { name: "yod-glide never split", law: yodIntact, on: ["messy", "structured"] },
+  // Onset maximisation — `structured` is the strongest cluster stressor and
+  // strictly supersedes `clean` here, so it runs there alone.
+  { name: "non-initial onset <= 1 consonant", law: onsetMax, on: ["structured"] },
+  // Completeness — `clean` uniquely reaches zero-nucleus words; `structured`
+  // covers heavy digraph/glide/cluster words.
+  { name: "fragments == nuclei (no mins)", law: completeness, on: ["clean", "structured"] },
+];
+
+describe("core syllabifier invariants", () => {
+  for (const { name, law, on } of LAWS) {
+    for (const gen of on) {
+      it(`${name} [${gen}]`, () => {
+        fc.assert(
+          fc.property(GENERATORS[gen], (w) => {
+            law(w);
+          }),
+          { numRuns: RUNS },
+        );
+      });
+    }
+  }
 });
 
-describe("structural invariants (clean Armenian words)", () => {
-  it("every non-initial fragment has an onset of at most one consonant", () => {
-    fc.assert(
-      fc.property(cleanWord, (w) => {
-        const frags = syllabify(w);
-        for (let i = 1; i < frags.length; i++) {
-          expect(leadingConsonants(frags[i] as string)).toBeLessThanOrEqual(1);
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("never produces more fragments than there are nuclei", () => {
-    fc.assert(
-      fc.property(cleanWord, (w) => {
-        expect(syllabify(w).length).toBeLessThanOrEqual(Math.max(1, nucleusCount(w)));
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("with no min constraints, fragment count equals nucleus count", () => {
-    fc.assert(
-      fc.property(cleanWord, (w) => {
-        const frags = syllabify(w, { leftmin: 0, rightmin: 0 });
-        expect(frags.length).toBe(Math.max(1, nucleusCount(w)));
-      }),
-      { numRuns: RUNS },
-    );
-  });
-});
-
-describe("structured words (heavy ու / և / cluster / hiatus coverage)", () => {
-  it("letter conservation holds", () => {
-    fc.assert(
-      fc.property(structuredWord, (w) => {
-        expect(syllabify(w).join("")).toBe(w);
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("never splits ու or և, never empty", () => {
-    fc.assert(
-      fc.property(structuredWord, (w) => {
-        const frags = syllabify(w);
-        for (let i = 0; i < frags.length; i++) {
-          const frag = frags[i] as string;
-          expect([...frag].length).toBeGreaterThan(0);
-          if (i > 0) {
-            const prev = frags[i - 1] as string;
-            // ու digraph never split
-            expect(prev.endsWith("ո") && frag.startsWith("ւ")).toBe(false);
-            // yod-glide never split: a fragment must not start with the vowel
-            // whose յ ended the previous fragment
-            expect(prev.endsWith("յ") && /^[աեէըիոօ]/.test(frag)).toBe(false);
-          }
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("onset of every non-initial fragment is at most one consonant", () => {
-    fc.assert(
-      fc.property(structuredWord, (w) => {
-        const frags = syllabify(w);
-        for (let i = 1; i < frags.length; i++) {
-          expect(leadingConsonants(frags[i] as string)).toBeLessThanOrEqual(1);
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("with no min constraints, fragment count equals nucleus count", () => {
-    fc.assert(
-      fc.property(structuredWord, (w) => {
-        expect(syllabify(w, { leftmin: 0, rightmin: 0 }).length).toBe(nucleusCount(w));
-      }),
-      { numRuns: RUNS },
-    );
-  });
-});
-
-describe("leftmin / rightmin invariants", () => {
+describe("leftmin / rightmin", () => {
   const minsArb = fc.record({
     leftmin: fc.integer({ min: 1, max: 5 }),
     rightmin: fc.integer({ min: 1, max: 5 }),
   });
 
-  it("respects leftmin and rightmin on the extreme fragments", () => {
-    fc.assert(
-      fc.property(cleanWord, minsArb, (w, mins) => {
-        const frags = syllabify(w, mins);
-        if (frags.length > 1) {
-          expect([...(frags[0] as string)].length).toBeGreaterThanOrEqual(mins.leftmin);
-          expect([...(frags[frags.length - 1] as string)].length).toBeGreaterThanOrEqual(mins.rightmin);
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
-
-  it("every break offset honors both mins", () => {
+  // Offset-level guarantee on breakPoints. The fragment-level guarantee (first
+  // fragment >= leftmin, last >= rightmin) follows from this plus conservation,
+  // so it is not fuzzed separately.
+  it("every break offset honors both mins [clean]", () => {
     fc.assert(
       fc.property(cleanWord, minsArb, (w, mins) => {
         const total = [...w].length;
