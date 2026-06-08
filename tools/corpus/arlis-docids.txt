@@ -1,0 +1,14 @@
+# ARLIS DocumentView DocIDs — vocabulary-rich RA legal acts.
+# One numeric DocID per line; "#" starts a comment. Used by fetch-arlis.mjs.
+# Big codes first (richest vocabulary). Expand freely; failures are skipped.
+
+74658    # Civil Code (Քաղաքացիական օրենսգիրք)
+22772    # Criminal Code (Քրեական օրենսգիրք)
+194077   # Labour Code (Աշխատանքային օրենսգիրք)
+109017   # Tax Code (Հարկային օրենսգիրք)
+131341   # Law on Citizenship (Քաղաքացիության մասին)
+71908    # Law on General Education (Հանրակրթության մասին)
+142605   # (act)
+142123   # (act)
+123965   # Government decision
+117133   # (act)
