@@ -36,15 +36,74 @@ Geminates fall out of the k≥2 rule automatically: բեր-րի.
 
 A word with one nucleus is a monosyllable and never breaks: մարդ, գիրք.
 
-## Unwritten schwa (ը) — phase 2
+## Unwritten schwa (ը) epenthesis
 
-The schwa /ə/ is pronounced but not written between many consonant clusters. When such a word is broken, `ը` **is written** at the line end and the next line start; when unbroken it is not written:
+The schwa /ə/ is pronounced but not written between many consonant clusters; it
+appears in the **hyphenated** form (RA orthographic rule) but not when the word
+is unbroken. Its position is fully predictable.
 
-- հե-տաքրքրվել (unbroken) → հետաքըր-քըրվել (broken)
-- կըն-քահայր
-- initial clusters `զբ զգ շտ սպ սկ ստ …`: `ը` precedes the first consonant — ըզ-բոսանք, ըշ-տապել, ըս-կիզբ, ըս-տանալ
+**Sources:** Dolatian 2023, *Isomorphism between orthography and underlying forms
+in the syllabification of the Armenian schwa* (Phonological Data and Analysis
+5(4), open access; + 2021 slides) — schwa placement = **right-to-left directional
+syllabification** (Itô 1989 CVCC template). RA orthographic convention
+(hy.wikipedia Տողադարձ) for how/where the `ը` is written at a break.
 
-Phase 1 does **not** insert schwa: words whose only break would require schwa epenthesis are left unbroken (safe under-break, never a wrong break).
+### Syllable template & sonority
+
+Maximal syllable = **(C)(j)V(C)(C)**: onset ≤ 1 consonant (+ optional glide `յ`,
+already a nucleus-merge), nucleus, coda ≤ 2 consonants **with falling sonority**.
+
+Sonority, high → low: vowel > glide (`յ ւ`) > liquid (`ր ռ լ`) > nasal (`մ ն`) >
+fricative (`վ զ ս ժ շ ղ խ հ ֆ`) > stop/affricate (`բ պ փ գ կ ք դ տ թ ձ ծ ց ջ ճ չ`).
+A two-consonant coda `C1C2` (C1 nearer the nucleus) is legal iff
+`sonority(C1) > sonority(C2)`.
+
+### Algorithm (right-to-left)
+
+Written vowels (incl. `ու`, `և`, yod nuclei) are nuclei. Parse right-to-left;
+maximise onsets; any consonant that cannot attach as an onset (max 1) or inside a
+legal falling-sonority coda (max 2) gets an epenthetic `ə` as its own nucleus.
+(OT equivalent: `*CC ≫ Onset ≫ Dep`, with `Align-σ-Left`.) All examples below are
+attested in Dolatian and reproducible by the procedure:
+
+| context | rule | example |
+|---|---|---|
+| 2C `C1C2V` | `C1ə·C2V` | տնել→`tə.nel`, քրել→`pə.rel` |
+| 3C `C1C2C3V` | `C1əC2·C3V` | կրբան→`kər.ban`, խնտալ→`xən.tal` |
+| 4C, C2C3 = legal coda | `C1əC2C3·C4V` (1 schwa) | պնդրել→`pənd.rel` |
+| 4C, C2C3 ≠ legal coda | `C1ə·C2əC3·C4V` (2 schwas) | մգրդել→`mə.gər.del` |
+| medial 2C `VC1C2V` | `VC1·C2V` (no schwa) | բարգիլ→`bar.gil` |
+| medial 3C, C1C2 = coda | `VC1C2·C3V` (no schwa) | անցրեվ→`ants.rev` |
+| medial 3C, can't syllabify | `V·C1əC2·C3V` | պեդրվար→`pe.dər.var` |
+
+### Word-initial sibilant + stop — exception
+
+`#[ս զ շ ժ] + stop` puts `ə` **before** the sibilant (the sibilant syllabifies as
+a coda, not an onset): սկիզբ→`ըս-կիզբ`, ստանալ→`ըս-տանալ`, զբոսանք→`ըզ-բոսանք`,
+շտապել→`ըշ-տապել`. This overrides the general `C1ə` placement word-initially.
+
+### Output: discretionary breaks — a separate mode (ADR)
+
+A schwa break **writes `ը`** at line end + next-line start (հետաքըր-քըրվել) but the
+word carries no `ը` when unbroken (հետաքրքրվել). So it changes characters — it is a
+TeX-style **discretionary break** `\discretionary{pre}{post}{nobreak}`, not a plain
+break point.
+
+**Decision:** schwa is an **additional output mode**, kept out of the pure core.
+- `syllabify` / `hyphenate` stay strictly letter-preserving (the conservation
+  invariant is sacred there). They emit only break *positions*; for clusters that
+  would require epenthesis they simply produce no break (safe under-break).
+- A separate `hyphenateOrthographic` (name TBD) returns **discretionary breaks**
+  `{ index, pre, post, nobreak }`, where the schwa is materialised in `pre`/`post`.
+  This is what TeX patterns and justified print need; soft-hyphen/CSS consumers
+  use the pure mode.
+
+The two modes share the same right-to-left syllabifier; only the rendering differs.
+
+**Validation:** the 415 schwa words in the Wiktionary gold set
+(`playground/reference/wiktionary/`) are the empirical oracle — implement the
+procedure, then confirm/adjust the sonority classes and the sibilant rule against
+them before claiming correctness.
 
 ## Compounds & prefixes — phase 2 (optional)
 
