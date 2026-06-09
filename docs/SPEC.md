@@ -10,7 +10,11 @@ Two variants, selectable from one core:
 - **eastern** — Eastern Armenian, reformed (Abeghyan) orthography. RA state standard.
 - **western** — Western Armenian, classical (Mashtotsian) orthography.
 
-`leftmin = 1`, `rightmin = 2` (a single vowel may be left at line end — Armenian-specific, unlike English).
+`leftmin = 1`, `rightmin = 2`. Armenian hyphenation is syllable-based and imposes
+no minimum-letter rule, so a single vowel may legitimately stand at a line end
+(`ա-թոռ`, `ա-շա-կերտ`) — unlike English, which forbids it (see References).
+Raising `leftmin` to 2 is a print house-style choice applied at render time, not
+an orthographic requirement.
 
 ## Nuclei (syllable count = nucleus count)
 
@@ -121,5 +125,5 @@ Official rules permit **either** syllabic **or** morphological breaking: ան-ո
 ## References
 
 - Տողադարձ — Armenian Wikipedia: https://hy.wikipedia.org/wiki/Տողադարձ
-- «Տողադարձի մասin» կանոնները (RA Minister of Education order): http://www.irtek.am/views/act.aspx?aid=19824
+- «Տողադարձի մասին» կանոնները (RA Minister of Education order): http://www.irtek.am/views/act.aspx?aid=19824
 - W3C Armenian orthography notes: https://r12a.github.io/scripts/armn/hy.html

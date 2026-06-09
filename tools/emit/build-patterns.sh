@@ -7,7 +7,7 @@
 # exactly on the corpus. This is the keystone artifact; downstream emitters
 # (.dic, .hyb, hypher .json) derive from it. See docs/SOURCES.md §F.
 #
-# Requires: node, pnpm, and pypatgen (pip install pypatgen). Override the binary
+# Requires: node, npm, and pypatgen (pip install pypatgen). Override the binary
 # with PYPATGEN=/path/to/pypatgen for CI.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -22,7 +22,8 @@ TEX="$OUT_DIR/hyph-hy.tex"
 # 6 levels, lengths to 8. patgen alternates hyphenating/inhibiting levels, so an
 # EVEN count ends on an inhibiting pass that removes false breaks -> precision is
 # prioritised over recall (a wrong break is a visible error; a missed break is
-# invisible). Held-out on the ~84k corpus: recall ~98.5% / precision ~99.7%.
+# invisible). Held-out generalisation (tools/emit/holdout.mjs, 10% content-hash
+# split): recall ~98.5% / precision ~99.6% / 95.6% of words broken exactly right.
 # (.hyb overflows Chromium's 32-bit trie at any size for this corpus, so the
 # larger pattern set costs nothing there; exceptions give exact corpus reproduction.)
 SCHEDULE=("2-4 1:2:20" "2-4 2:1:8" "2-6 1:4:8" "2-6 3:2:4" "2-8 1:2:3" "2-8 3:1:1")
@@ -30,7 +31,7 @@ SCHEDULE=("2-4 1:2:20" "2-4 2:1:8" "2-6 1:4:8" "2-6 3:2:4" "2-8 1:2:3" "2-8 3:1:
 mkdir -p "$OUT_DIR" playground/patterns
 
 echo "[1/4] build engine + label corpus"
-pnpm build >/dev/null
+npm run build >/dev/null
 node tools/emit/label.mjs
 
 echo "[2/4] train patterns"

@@ -61,9 +61,11 @@ syllabifyWithSchwa("գրել");  // ["գը", "րել"]
 
 `hyphenateText` always uses the soft hyphen and accepts `{ leftmin, rightmin }`.
 
-Letter conservation is an enforced invariant: removing the inserted hyphens (or
-soft hyphens) always yields the exact original text. Verified by property-based
-fuzzing.
+For `hyphenate`, `syllabify`, and `hyphenateText`, letter conservation is an
+enforced invariant: removing the inserted hyphens (or soft hyphens) always yields
+the exact original text (verified by property-based fuzzing). `syllabifyWithSchwa`
+is the deliberate exception — it inserts the orthographic schwa `ը`, so by design
+it does not round-trip.
 
 ## Artifacts for typesetting tools
 
@@ -109,8 +111,10 @@ reference patterns (hypher, Hyphenopoly, and the rest) score **7/14** — they f
 every cluster. Reproduce it: `cd benchmarks && npm install && node compare.mjs`
 (details in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)). Patterns generated
 from the engine reproduce it **100%** on the training corpus and generalise to
-unseen words at roughly **98.5% recall / 99.7% precision** (precision is
-prioritised — a wrong break is a visible error, a missed break is invisible).
+unseen words at **98.5% recall / 99.6% precision** (measured on an 8.3k-word
+held-out split; 95.6% of those words break exactly right — reproduce with
+`node tools/emit/holdout.mjs`). Precision is prioritised — a wrong break is a
+visible error, a missed break is invisible.
 
 Schwa in the `.dic`: zero spurious `ը` across ~65k non-schwa words, and 100% of
 single-schwa-break words covered (multi-break words fall back to the runtime
@@ -139,10 +143,10 @@ classical orthography are planned from the same core.
 ## Development
 
 ```sh
-pnpm install
-pnpm test        # engine + property-based invariants
-pnpm typecheck
-pnpm build
+npm install
+npm test          # engine + property-based invariants
+npm run typecheck
+npm run build
 ./tools/emit/build-patterns.sh   # regenerate artifacts (needs pypatgen)
 ```
 

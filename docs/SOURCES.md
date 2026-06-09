@@ -108,6 +108,16 @@ corpus and publishes the agreement %; residual mismatches go into the TeX
 `\hyphenation{}` exception list for exact reproduction. The TS engine remains the
 authoritative reference for anyone who can run it.
 
+**Generalisation is held-out, not just on-corpus.** `tools/emit/verify.mjs`
+measures exact reproduction on the full training corpus (100%, by construction).
+To measure *unseen* words, `tools/emit/holdout.mjs` splits the corpus by content
+hash into train (~90%) and a held-out ~10% (8,341 words / 19,783 break points),
+trains patterns on the train split only, then applies them to the held-out words:
+**98.45% recall, 99.63% precision, 95.6% of words broken exactly right**. Held-out
+words are absent from the training dictionary, so patgen exceptions cannot
+memorise them — this is pure pattern generalisation, reproducible with
+`node tools/emit/holdout.mjs`.
+
 **Schwa (ը) hyphenation — `.dic` only.** Liang patterns are letter-preserving,
 so the epenthetic ը that Armenian writes at a break inside a vowelless cluster
 (`գրել → գը-րել`, `սկսել → սըկ-սել`) can only be expressed by libhyphen's

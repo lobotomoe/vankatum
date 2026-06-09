@@ -12,7 +12,7 @@ two stands in for every existing tool. See [`SOURCES.md`](SOURCES.md) §A.
 ## Reproduce
 
 ```sh
-pnpm build                         # build the engine (repo root)
+npm run build                      # build the engine (repo root)
 cd benchmarks && npm install
 node compare.mjs
 ```
@@ -54,7 +54,9 @@ edge case.
 ## Generated-pattern quality
 
 The pattern files vankatum emits reproduce the engine **100%** on the training
-corpus and generalise to unseen words at roughly **98.5% recall / 99.7%
-precision** (held-out). The schwa `.dic` rules add **0 spurious `ը`** across ~65k
-non-schwa words while covering 100% of single-schwa-break words. Methodology and
-corpora: [`SOURCES.md`](SOURCES.md).
+corpus and generalise to unseen words at **98.5% recall / 99.6% precision** —
+held-out on an 8,341-word split selected by content hash, never seen in training,
+with 95.6% of those words broken exactly right. Reproduce with
+`node tools/emit/holdout.mjs` (needs pypatgen). The schwa `.dic` rules add
+**0 spurious `ը`** across ~65k non-schwa words while covering 100% of
+single-schwa-break words. Methodology and corpora: [`SOURCES.md`](SOURCES.md).
