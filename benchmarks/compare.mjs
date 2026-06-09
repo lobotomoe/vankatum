@@ -7,7 +7,7 @@
  *
  *     cd benchmarks && npm install && node compare.mjs
  *
- * Requires the engine to be built first (pnpm build at the repo root).
+ * Requires the engine to be built first (npm run build at the repo root).
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
