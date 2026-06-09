@@ -1,0 +1,13 @@
+{
+  "name": "vankatum-benchmarks",
+  "private": true,
+  "description": "Head-to-head comparison of vankatum against the existing Armenian hyphenation engines.",
+  "scripts": {
+    "bench": "node compare.mjs"
+  },
+  "dependencies": {
+    "hyphenation.hy": "^0.2.1",
+    "hyphenopoly": "^6.1.0",
+    "hypher": "^0.2.5"
+  }
+}

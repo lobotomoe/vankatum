@@ -1,0 +1,19 @@
+{
+  "_note": "Expected hyphenations derived from documented Armenian rules (RA Տողադարձ). Single intervocalic consonant -> CV to next line; two consonants -> VC-CV split; monosyllables not broken; the digraph ու stays intact; leftmin=1 is allowed in Armenian.",
+  "cases": [
+    { "word": "կատու",       "expected": "կա-տու",        "rule": "single-C",  "gloss": "cat" },
+    { "word": "սովորել",     "expected": "սո-վո-րել",     "rule": "single-C",  "gloss": "to study" },
+    { "word": "աթոռ",        "expected": "ա-թոռ",         "rule": "single-C",  "gloss": "chair" },
+    { "word": "հազիվ",       "expected": "հա-զիվ",        "rule": "single-C",  "gloss": "hardly" },
+    { "word": "քաղաքական",   "expected": "քա-ղա-քա-կան",  "rule": "single-C",  "gloss": "political" },
+    { "word": "արձան",       "expected": "ար-ձան",        "rule": "cluster",   "gloss": "statue" },
+    { "word": "ընկեր",       "expected": "ըն-կեր",        "rule": "cluster",   "gloss": "friend" },
+    { "word": "հաստատ",      "expected": "հաս-տատ",       "rule": "cluster",   "gloss": "firm" },
+    { "word": "որդի",        "expected": "որ-դի",         "rule": "cluster",   "gloss": "son" },
+    { "word": "մարդիկ",      "expected": "մար-դիկ",       "rule": "cluster",   "gloss": "people" },
+    { "word": "աշխատանք",    "expected": "աշ-խա-տանք",    "rule": "cluster",   "gloss": "work" },
+    { "word": "ուսանող",     "expected": "ու-սա-նող",     "rule": "digraph+cluster", "gloss": "student" },
+    { "word": "մարդ",        "expected": "մարդ",          "rule": "monosyllable", "gloss": "man" },
+    { "word": "գիրք",        "expected": "գիրք",          "rule": "monosyllable", "gloss": "book" }
+  ]
+}

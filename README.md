@@ -105,7 +105,9 @@ Chromium/Android build can compile a `.hyb` from whatever pattern subset fits.
 ## Quality
 
 On a gold set of cluster words, vankatum scores **14/14** where the shared
-reference patterns score **7/14** (they fail every cluster). Patterns generated
+reference patterns (hypher, Hyphenopoly, and the rest) score **7/14** — they fail
+every cluster. Reproduce it: `cd benchmarks && npm install && node compare.mjs`
+(details in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)). Patterns generated
 from the engine reproduce it **100%** on the training corpus and generalise to
 unseen words at roughly **98.5% recall / 99.7% precision** (precision is
 prioritised — a wrong break is a visible error, a missed break is invisible).
