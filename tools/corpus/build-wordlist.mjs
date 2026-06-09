@@ -1,22 +1,23 @@
 /**
  * Build the committed corpus snapshot — the reproducible vocabulary that pattern
- * generation trains on. Combines the harvested ARLIS wordlist with the
- * Wiktionary headwords, deduped and lowercased, into corpus/wordlist.txt.
+ * generation trains on. Unions every harvested source (playground/corpus/<src>/
+ * wordlist.txt: arlis, wikipedia, wikisource, hunspell, frequencywords, ...) with
+ * the Wiktionary headwords, deduped and lowercased, into corpus/wordlist.txt.
  *
- * This is a manual "refresh" step (run after re-harvesting ARLIS): the snapshot
- * is committed so CI can build patterns without scraping any external site. Only
- * bare words are stored — no hyphenations, no act text. See docs/SOURCES.md.
+ * A manual "refresh" step (run after re-harvesting): the snapshot is committed so
+ * CI builds patterns without scraping any external site. Only bare words are
+ * stored — no hyphenations, no source text. See docs/SOURCES.md.
  *
  * Usage: node tools/corpus/build-wordlist.mjs
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../..");
-const ARLIS = join(ROOT, "playground/corpus/arlis/wordlist.txt");
+const CORPUS = join(ROOT, "playground/corpus");
 const WIKTIONARY = join(ROOT, "playground/reference/wiktionary/wiktionary-hy.tsv");
 const OUT = join(ROOT, "corpus/wordlist.txt");
 
@@ -30,21 +31,38 @@ async function readLines(path) {
   }
 }
 
+/** Add every VALID word from `lines` (mapped through `pick`) to `vocab`, return how many were new. */
+function ingest(vocab, lines, pick) {
+  const before = vocab.size;
+  for (const line of lines) {
+    const w = (pick(line) ?? "").trim().toLowerCase();
+    if (VALID.test(w)) vocab.add(w);
+  }
+  return vocab.size - before;
+}
+
 async function main() {
   const vocab = new Set();
 
-  for (const line of await readLines(ARLIS)) {
-    const w = line.trim().toLowerCase();
-    if (VALID.test(w)) vocab.add(w);
+  // Every harvested source directory contributes its wordlist.txt.
+  let sources = [];
+  try {
+    sources = await readdir(CORPUS, { withFileTypes: true });
+  } catch {
+    /* corpus dir may not exist yet */
   }
-  for (const line of await readLines(WIKTIONARY)) {
-    const [word] = line.split("\t");
-    const w = (word ?? "").trim().toLowerCase();
-    if (VALID.test(w)) vocab.add(w);
+  for (const entry of sources) {
+    if (!entry.isDirectory()) continue;
+    const added = ingest(vocab, await readLines(join(CORPUS, entry.name, "wordlist.txt")), (l) => l);
+    if (added > 0) console.log(`  ${entry.name}: +${added}`);
   }
 
+  // Wiktionary headwords (first TSV column).
+  const wikt = ingest(vocab, await readLines(WIKTIONARY), (l) => l.split("\t")[0]);
+  if (wikt > 0) console.log(`  wiktionary: +${wikt}`);
+
   if (vocab.size === 0) {
-    throw new Error("no source words — run fetch-arlis.mjs and fetch-references.sh first");
+    throw new Error("no source words — run the fetch-* harvesters first");
   }
 
   const words = [...vocab].sort((a, b) => a.localeCompare(b, "hy"));

@@ -45,6 +45,15 @@ Not downloaded, but verified (via research) to reuse the same `hyph-hy` patterns
 | **English Wiktionary via kaikki.org** | wiktextract JSONL; field `hyphenations[].parts`, `lang_code: hy`. Human-curated `Hyphenation:` lines (full syllabification, Eastern). **Our primary gold.** | CC BY-SA 4.0 + GFDL | `https://kaikki.org/dictionary/Armenian/kaikki.org-dictionary-Armenian.jsonl` (206 MB) | extracted → `wiktionary/wiktionary-hy.tsv` (~2235 rows / 2204 valid words) |
 | **ARLIS — Armenian Legal Information System** | Official RA legislation (~208k acts), modern Eastern Armenian formal prose. **Raw text wordlist source** (no hyphenation — used for vocabulary coverage in pattern generation + as a real-text regression corpus, NOT an oracle). | RA government works (public legal acts) | `https://www.arlis.am/DocumentView.aspx?DocID=<id>` — server-rendered HTML, scrapeable via plain `curl` (strip tags → `[Ա-Ֆա-ֆ]+` tokens). One act ≈ 1k+ unique words. | harvester `tools/corpus/fetch-arlis.mjs`; raw → `playground/corpus/arlis/` |
 
+Additional **wordlist coverage** sources (different registers → better pattern generalisation; words only, no hyphenation):
+
+| Source | Register | License | URL | Harvester |
+|---|---|---|---|---|
+| **Hunspell hy_AM (martakert/hyspell)** | Curated spell-check lexicon (~63k root words) — the single biggest vocabulary source | GPL/LGPL/MPL | `https://raw.githubusercontent.com/martakert/hyspell/master/hy_AM.dic` (first line = count; `root/AFFIXFLAGS`) | `tools/corpus/fetch-wordlists.mjs` |
+| **Wikipedia (hy)** | Encyclopedic, all domains | CC BY-SA | `https://hy.wikipedia.org/w/api.php` (`generator=random&prop=extracts&explaintext`) | `tools/corpus/fetch-wiki.mjs` |
+| **Wikisource (hy)** | Literary / classical | CC BY-SA / PD | `https://hy.wikisource.org/w/api.php` (same API) | `tools/corpus/fetch-wiki.mjs` |
+| **FrequencyWords (hermitdave)** | Spoken/subtitle (OpenSubtitles) | CC-by-sa-4.0 | `https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hy/hy_full.txt` (`word count`) | `tools/corpus/fetch-wordlists.mjs` |
+
 Benchmark harness: `playground/harness/benchmark.mjs`. Compared with
 `leftmin=1/rightmin=1`, case-insensitive, `և↔եվ`-normalised, multi-variant =
 match-any; rejects corrupt entries where the de-hyphenated form ≠ the word.
@@ -98,6 +107,14 @@ the engine. The pipeline diffs emitted-pattern output against the engine over th
 corpus and publishes the agreement %; residual mismatches go into the TeX
 `\hyphenation{}` exception list for exact reproduction. The TS engine remains the
 authoritative reference for anyone who can run it.
+
+**.hyb is best-effort.** Chromium's Minikin trie packs each node into a 32-bit
+word, so it cannot hold a pattern set as diverse as the one our ~84k-word corpus
+produces (even ~7.5k patterns overflow it — the limit is distinct-pattern
+diversity, not raw count). The release therefore skips `.hyb` and instead always
+ships the **Minikin trio** (`hyph-hy.pat.txt` / `.chr.txt` / `.hyp.txt`) so a
+Chrome/Android builder can run `mk_hyb_file.py` against whatever corpus subset
+fits their build. The trio + `mk_hyb_file.py` are vendored under `tools/emit/`.
 
 ---
 
