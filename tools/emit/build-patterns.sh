@@ -65,6 +65,11 @@ node tools/emit/verify.mjs "$TEX" "$DICT"
 
 echo "[5/5] derive downstream artifacts (.dic, hypher .json, .hyb)"
 node tools/emit/derive.mjs "$TEX" "$OUT_DIR"
+# Append epenthetic-schwa (ը) breaks to the .dic as libhyphen non-standard rules.
+# Liang patterns can't add characters, so this is the .dic only; covers ~93% of
+# schwa words (single-break) with zero wrong insertions, multi-break defers to the
+# runtime engine. See tools/emit/schwa-dic.mjs and docs/SOURCES.md §F.
+node tools/emit/schwa-dic.mjs "$OUT_DIR/hyph_hy_AM.dic"
 # .hyb is best-effort: Chromium's Minikin trie packs into 32-bit words, so a very
 # large pattern set legitimately overflows it. Skip (don't fail the release) when
 # it does — .tex/.json/.dic carry the full set regardless.

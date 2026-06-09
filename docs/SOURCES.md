@@ -108,6 +108,20 @@ corpus and publishes the agreement %; residual mismatches go into the TeX
 `\hyphenation{}` exception list for exact reproduction. The TS engine remains the
 authoritative reference for anyone who can run it.
 
+**Schwa (ը) hyphenation — `.dic` only.** Liang patterns are letter-preserving,
+so the epenthetic ը that Armenian writes at a break inside a vowelless cluster
+(`գրել → գը-րել`, `սկսել → սըկ-սել`) can only be expressed by libhyphen's
+**non-standard hyphenation** (character-changing breaks). `tools/emit/schwa-dic.mjs`
+appends these to `hyph_hy_AM.dic` (verified in real libhyphen via pyphen). Rules
+are **whole-word anchored** (`.word.`) at priority 9 — local/substring rules
+interfere across words and can't be made mutually exclusive without patgen (which
+has no non-standard mode); whole-word anchoring collides on a word with two schwa
+breaks, so only single-schwa-break words are emitted. Result over the 84k corpus:
+**0 spurious ը on 64,696 non-schwa words; 100% of 18,155 single-break schwa words
+covered; 1,354 multi-break words (6.9%) defer to the runtime engine** (safe
+under-hyphenation). Schwa correctness is bounded by the engine's schwa syllabifier
+(~86.6% vs gold). `.tex` / `.json` / `.hyb` carry no schwa.
+
 **.hyb is best-effort.** Chromium's Minikin trie packs each node into a 32-bit
 word, so it cannot hold a pattern set as diverse as the one our ~84k-word corpus
 produces (even ~7.5k patterns overflow it — the limit is distinct-pattern
