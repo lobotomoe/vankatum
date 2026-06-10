@@ -51,15 +51,16 @@ syllabifyWithSchwa("գրել");  // ["գը", "րել"]
 
 ### Options
 
-`hyphenate`, `syllabify`, and `breakPoints` take `{ leftmin, rightmin, hyphen }`:
+`hyphenate`, `syllabify`, and `breakPoints` take `{ leftmin, rightmin, hyphen, variant }`:
 
-| Option     | Default | Meaning                                  |
-|------------|---------|------------------------------------------|
-| `leftmin`  | `1`     | Minimum characters before the first break |
-| `rightmin` | `2`     | Minimum characters after the last break   |
-| `hyphen`   | `"-"`   | String inserted at each break (`hyphenate` only) |
+| Option     | Default      | Meaning                                  |
+|------------|--------------|------------------------------------------|
+| `leftmin`  | `1`          | Minimum characters before the first break |
+| `rightmin` | `2`          | Minimum characters after the last break   |
+| `hyphen`   | `"-"`        | String inserted at each break (`hyphenate` only) |
+| `variant`  | `"eastern"`  | Orthography: `"eastern"` (reformed) or `"western"` (classical) |
 
-`hyphenateText` always uses the soft hyphen and accepts `{ leftmin, rightmin }`.
+`hyphenateText` always uses the soft hyphen and accepts `{ leftmin, rightmin, variant }`.
 
 For `hyphenate`, `syllabify`, and `hyphenateText`, letter conservation is an
 enforced invariant: removing the inserted hyphens (or soft hyphens) always yields
@@ -137,8 +138,21 @@ engine  ->  labelled corpus  ->  patgen  ->  hyph-hy.tex  ->  .dic / .json / tri
 
 ## Variants
 
-Eastern Armenian (reformed orthography) is implemented. Western Armenian and
-classical orthography are planned from the same core.
+Eastern Armenian (reformed orthography) is the default. Western Armenian /
+classical (Mashtotsian) orthography is implemented from the same core — select it
+with `{ variant: "western" }`:
+
+```ts
+hyphenate("Սարգսեան", { variant: "western" });  // "Սարգ-սեան"  (եա = one nucleus)
+hyphenate("Սարգսեան");                            // "Սարգ-սե-ան" (eastern: եա is hiatus)
+hyphenate("արիւն",    { variant: "western" });    // "ա-րիւն"
+```
+
+The variant only changes nucleus recognition (the classical `եա`/`եօ` glide-digraphs
+read as one nucleus); the break rule and schwa engine are shared. The Western gold
+set is hand-derived and provisional, pending native-speaker review. Western pattern
+*artifacts* (the TeX/`.dic`/`.json` files) are not emitted yet — that needs a
+classical-orthography training corpus. Details: [`docs/SPEC.md`](docs/SPEC.md).
 
 ## Development
 

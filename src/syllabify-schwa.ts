@@ -10,6 +10,7 @@
  */
 
 import { tokenize, type Unit } from "./alphabet.js";
+import { resolveOrthography, type Variant } from "./orthography.js";
 
 const SCHWA = "ը";
 
@@ -32,8 +33,8 @@ function fallingSonority(inner: string, outer: string): boolean {
  * Syllabify a single Armenian word, inserting ը where the pronunciation requires
  * an epenthetic schwa. Letters other than the inserted ը are preserved.
  */
-export function syllabifyWithSchwa(word: string): string[] {
-  const units = tokenize(word);
+export function syllabifyWithSchwa(word: string, variant?: Variant): string[] {
+  const units = tokenize(word, resolveOrthography(variant));
   const syllables: string[] = [];
   let i = units.length - 1;
 

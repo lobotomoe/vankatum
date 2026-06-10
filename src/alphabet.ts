@@ -1,19 +1,22 @@
 /**
  * Armenian alphabet classification for syllabification.
  * See docs/SPEC.md for the linguistic contract.
+ *
+ * Which single letters are nuclei is owned by the orthography config
+ * (./orthography.ts). The digraph / glide / ligature merges below are universal:
+ * they hold for both the Eastern (reformed) and Western (classical) variants.
  */
 
-/** Single-codepoint vowels that act as syllable nuclei (reformed orthography). */
-export const VOWELS = new Set([..."աեէըիոօ"]);
+import { type Orthography, EASTERN } from "./orthography.js";
 
-/** ո + ւ — the /u/ digraph, one nucleus, never split. */
+/** ո + ւ — the /u/ digraph, one nucleus, never split. Universal. */
 export const DIGRAPH_O = "ո";
 export const YIWN = "ւ";
 
 /** յ before a vowel is a glide forming a rising diphthong (e.g. բյուր, ցյալ). */
 export const YOD = "յ";
 
-/** Ligature և (/jɛv/) — a nucleus with an inherent v coda. */
+/** Ligature և (/jɛv/) — a nucleus with an inherent v coda. Valid in both variants. */
 export const LIGATURE_EW = "և";
 
 export type UnitKind = "vowel" | "consonant" | "separator";
@@ -39,7 +42,11 @@ export const isArmenianLetter = (ch: string): boolean => {
  * vowel, or the ու digraph (ո+ւ). Excludes յ and և, which are handled by the
  * caller. Used both as the main token reader and as yod-glide lookahead.
  */
-function readVowelNucleus(chars: string[], j: number): { text: string; length: number } | undefined {
+function readVowelNucleus(
+  chars: string[],
+  j: number,
+  vowels: ReadonlySet<string>,
+): { text: string; length: number } | undefined {
   const ch = chars[j];
   if (ch === undefined) return undefined;
   const lo = ch.toLowerCase();
@@ -47,17 +54,40 @@ function readVowelNucleus(chars: string[], j: number): { text: string; length: n
   if (lo === DIGRAPH_O && after !== undefined && after.toLowerCase() === YIWN) {
     return { text: ch + after, length: 2 };
   }
-  if (VOWELS.has(lo)) return { text: ch, length: 1 };
+  if (vowels.has(lo)) return { text: ch, length: 1 };
+  return undefined;
+}
+
+/**
+ * If a configured vowel digraph (classical `եա` / `եօ`) starts at `j`, return its
+ * text and length. These two-vowel sequences form one glide nucleus that must
+ * never be split. Empty for reformed orthography, so this never fires there.
+ */
+function readVowelDigraph(
+  chars: string[],
+  j: number,
+  orthography: Orthography,
+): { text: string; length: number } | undefined {
+  const ch = chars[j];
+  const after = chars[j + 1];
+  if (ch === undefined || after === undefined) return undefined;
+  const lo = ch.toLowerCase();
+  const afterLo = after.toLowerCase();
+  for (const [first, second] of orthography.vowelDigraphs) {
+    if (lo === first && afterLo === second) return { text: ch + after, length: 2 };
+  }
   return undefined;
 }
 
 /**
  * Split a word into classified units. Merges the ու digraph, the yod-glide
- * (յ + vowel → one rising-diphthong nucleus, e.g. բյուր, ցյալ) and recognises
- * և. Case-insensitive classification; original characters are preserved.
+ * (յ + vowel → one rising-diphthong nucleus, e.g. բյուր, ցյալ), the classical
+ * vowel digraphs (եա / եօ, Western only) and recognises և. Case-insensitive
+ * classification; original characters are preserved.
  */
-export function tokenize(word: string): Unit[] {
+export function tokenize(word: string, orthography: Orthography = EASTERN): Unit[] {
   const chars = [...word];
+  const { vowels } = orthography;
   const units: Unit[] = [];
   let offset = 0;
 
@@ -66,8 +96,11 @@ export function tokenize(word: string): Unit[] {
     const lo = ch.toLowerCase();
 
     // Yod-glide: յ immediately before a vowel nucleus joins it as one nucleus.
-    if (lo === YOD) {
-      const glided = readVowelNucleus(chars, i + 1);
+    // A configured vowel digraph (εα / εօ) outranks the glide: in `յեա` the εα
+    // digraph is the nucleus and յ is a plain onset (one syllable, like կեանք),
+    // not a `յե` glide with α stranded.
+    if (lo === YOD && readVowelDigraph(chars, i + 1, orthography) === undefined) {
+      const glided = readVowelNucleus(chars, i + 1, vowels);
       if (glided !== undefined) {
         units.push({ text: ch + glided.text, start: offset, kind: "vowel" });
         offset += ch.length + glided.text.length;
@@ -76,7 +109,16 @@ export function tokenize(word: string): Unit[] {
       }
     }
 
-    const nucleus = readVowelNucleus(chars, i);
+    // Classical vowel digraph (եա / եօ): two vowels read as one glide nucleus.
+    const digraph = readVowelDigraph(chars, i, orthography);
+    if (digraph !== undefined) {
+      units.push({ text: digraph.text, start: offset, kind: "vowel" });
+      offset += digraph.text.length;
+      i += digraph.length - 1;
+      continue;
+    }
+
+    const nucleus = readVowelNucleus(chars, i, vowels);
     if (nucleus !== undefined) {
       units.push({ text: nucleus.text, start: offset, kind: "vowel" });
       offset += nucleus.text.length;

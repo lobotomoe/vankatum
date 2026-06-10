@@ -118,9 +118,42 @@ Official rules permit **either** syllabic **or** morphological breaking: ան-ո
 - Acronyms / all-caps letter abbreviations: ԽՍՀՄ, ԱՊՀ.
 - Inside `ու` or `և`.
 
-## Western / classical deltas — phase 2
+## Western / classical orthography variant
 
-`ւ` is an independent letter; classical diphthongs (`եւ իւ ոյ ...`) and the `ու` digraph need variant-specific nucleus handling. Implemented as a separate variant config over the same engine.
+Selectable with `{ variant: "western" }` (default `"eastern"`). It is the **same
+core** — same break rule, same schwa sonority — over a different nucleus config
+(`src/orthography.ts`). The investigation behind it found the tokenizer delta is
+much smaller than it first appears:
+
+- **Standalone `ւ` and `յ` are already consonants**, so the classical sequences
+  `իւ` (ի + ւ-coda), `եւ` (ե + ւ-coda) and `ոյ` (ո + յ-coda) syllabify correctly
+  with **no** special casing — they fall out of the shared core. E.g. classical
+  `արիւն → ա-րիւն` (matching reformed `ա-րյուն`), `քոյր → քոյր` (monosyllable),
+  `միութիւն → մի-ու-թիւն`. The `ու` digraph and `և` ligature are unchanged.
+- **The one genuine delta** is the vowel+vowel glide-digraphs `եա` (/ja/, reformed
+  `յա`) and `եօ` (/jo/, reformed `յո`). Western reads each as **one nucleus that
+  never splits**; the Eastern engine reads the same two letters as hiatus. So
+  `ատեան → ա-տեան` and `Սարգսեան → Սարգ-սեան` in Western, vs `ա-տե-ան` /
+  `Սարգ-սե-ան` in Eastern. The `եա`/`եօ` digraph outranks the `յ`-glide
+  (`յեա` = `յ`-onset + `եա`-nucleus, one syllable).
+
+Single vowels are the same inventory in both (`ա ե է ը ի ո օ`); the Eastern/Western
+consonant voicing shift does not change manner of articulation, so the schwa
+sonority classes are shared unchanged.
+
+**Caveat (provisional).** `եա`/`եօ` are merged whenever the two letters are
+adjacent. Across a morpheme boundary they can be genuine hiatus (`/e.a/`), which
+this purely-orthographic pass cannot detect; the optional morphological layer
+(below) would resolve those. The Western gold set (`test/western.gold.ts`) is
+hand-derived from the rules and **pending native-speaker review**. Reformed
+↔ classical *transliteration* is out of scope: the engine hyphenates classical
+text as written, it does not convert orthographies.
+
+**Out of scope for now:** Western pattern *artifacts* (`hyph-hyw.tex` / `.dic` /
+`.json`). They need a classical-orthography training corpus, which does not exist
+yet; the whole `tools/emit/*` pipeline remains Eastern-only.
+
+Sources for the classical↔reformed correspondences: en.wikipedia.org/wiki/Armenian_orthography_reform.
 
 ## References
 

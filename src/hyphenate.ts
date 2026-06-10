@@ -7,6 +7,7 @@
  */
 
 import { tokenize, type Unit } from "./alphabet.js";
+import { resolveOrthography, type Variant } from "./orthography.js";
 
 export interface HyphenateOptions {
   /** Minimum characters before the first break. Default 1 (Armenian-specific). */
@@ -15,6 +16,8 @@ export interface HyphenateOptions {
   rightmin?: number;
   /** String inserted at each break point. Default "-". */
   hyphen?: string;
+  /** Orthography variant. Default "eastern" (reformed). "western" enables classical digraphs. */
+  variant?: Variant;
 }
 
 const DEFAULTS = { leftmin: 1, rightmin: 2, hyphen: "-" } as const;
@@ -28,7 +31,7 @@ export function breakPoints(word: string, options: HyphenateOptions = {}): numbe
   const rightmin = options.rightmin ?? DEFAULTS.rightmin;
   const total = [...word].length;
 
-  const units = tokenize(word);
+  const units = tokenize(word, resolveOrthography(options.variant));
   const points: number[] = [];
 
   // Walk nucleus to nucleus within each separator-free segment.
