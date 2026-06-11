@@ -28,7 +28,8 @@ pattern files for the whole ecosystem.
 npm install vankatum   # once published
 ```
 
-ESM, TypeScript types included, zero runtime dependencies.
+ESM-only (Node 18+; from CommonJS use a dynamic `import()`), TypeScript types
+included, zero runtime dependencies.
 
 ## Usage (JavaScript / TypeScript)
 
