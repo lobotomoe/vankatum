@@ -1,10 +1,13 @@
 # vankatum
 
+[![npm](https://img.shields.io/npm/v/vankatum.svg)](https://www.npmjs.com/package/vankatum)
+[![license](https://img.shields.io/npm/l/vankatum.svg)](LICENSE)
+
 Reliable Armenian (hy) hyphenation for the web and for print — one rule-based
 engine, delivered to every major typesetting tool.
 
-> Status: pre-1.0. The TypeScript engine and the generated pattern artifacts are
-> complete and tested; the npm package and tagged releases are not published yet.
+> Status: pre-1.0, published. The TypeScript engine and the generated pattern
+> artifacts are complete and tested; the API may still change before 1.0.
 
 ## Why
 
@@ -25,7 +28,7 @@ pattern files for the whole ecosystem.
 ## Install
 
 ```sh
-npm install vankatum   # once published
+npm install vankatum
 ```
 
 ESM-only (Node 18+; from CommonJS use a dynamic `import()`), TypeScript types
