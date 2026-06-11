@@ -48,7 +48,7 @@ describe("hyphenateText — conservation invariant", () => {
   it("removing every soft hyphen restores the original text exactly", () => {
     const segment = fc.oneof(
       fc
-        .array(fc.constantFrom(...[..."աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև"]), {
+        .array(fc.constantFrom(...Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև")), {
           minLength: 1,
           maxLength: 12,
         })

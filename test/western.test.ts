@@ -7,11 +7,11 @@ const e = (word: string) => hyphenate(word, { variant: "eastern", hyphen: "-" })
 
 describe("Western / classical gold set (docs/SPEC.md, provisional)", () => {
   for (const [word, expected, gloss] of WESTERN_GOLD) {
-    it(`${word} -> ${expected}  (${gloss})`, () => expect(w(word)).toBe(expected));
+    it(`${word} -> ${expected}  (${gloss})`, () => { expect(w(word)).toBe(expected); });
   }
 });
 
-describe("εα / εօ glide-digraphs: Western merges, Eastern splits as hiatus", () => {
+describe("եա / եօ glide-digraphs: Western merges, Eastern splits as hiatus", () => {
   // The defining delta. The same string must hyphenate differently per variant.
   const cases: Array<[string, string, string]> = [
     ["ատեան", "ա-տեան", "ա-տե-ան"],
@@ -29,6 +29,6 @@ describe("εα / εօ glide-digraphs: Western merges, Eastern splits as hiatus",
 
 describe("shared core: words with no Western delta hyphenate identically", () => {
   for (const word of ["կարդալ", "աշխատանք", "ուսանող", "որդի", "մարդ", "ընկեր"]) {
-    it(`${word}: western === eastern`, () => expect(w(word)).toBe(e(word)));
+    it(`${word}: western === eastern`, () => { expect(w(word)).toBe(e(word)); });
   }
 });

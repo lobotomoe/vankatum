@@ -14,7 +14,7 @@
  *                universal laws this is a strict superset of `clean`, so `clean`
  *                is not re-run on them.
  *   structured — deliberately emits ու digraphs, the և ligature, յ-glides,
- *                (Western) εα/εօ glide-digraphs, consonant clusters and hiatus;
+ *                (Western) եա/եօ glide-digraphs, consonant clusters and hiatus;
  *                the strongest stressor for the digraph/glide and onset laws.
  *   clean      — random Armenian lowercase. Its only unique contribution is
  *                zero-nucleus (all-consonant) words, which `structured` cannot
@@ -29,9 +29,10 @@ const RUNS = 5000;
 const VARIANTS = ["eastern", "western"] as const satisfies ReadonlyArray<Variant>;
 
 // Lowercase Armenian letters incl. ligature և and yiwn ւ (so ու digraphs form).
-const LOWER = [..."աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև"];
-const UPPER = [..."ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ"];
-const NOISE = [..." -.,՝՜԰0123abcЖ\n\t"];
+const LOWER = Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև");
+const UPPER = Array.from("ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ");
+// 😀 is astral (2 UTF-16 units): catches any UTF-16/codepoint indexing drift.
+const NOISE = Array.from(" -.,՝՜԰0123abcЖ😀\n\t");
 
 const cleanWord = fc
   .array(fc.constantFrom(...LOWER), { minLength: 1, maxLength: 24 })
@@ -45,7 +46,7 @@ const messyText = fc
 // ligature (և), consonant clusters and hiatus, so the structural invariants get
 // real coverage instead of relying on rare random collisions. Its nucleus pool is
 // derived from the orthography config so the variants share one source of truth.
-const CONSONANTS = [..."բգդզթժլխծկհձղճմյնշչպջռսվտրցփքֆ"]; // includes յ (forms yod-glides)
+const CONSONANTS = Array.from("բգդզթժլխծկհձղճմյնշչպջռսվտրցփքֆ"); // includes յ (forms yod-glides)
 const SINGLE_VOWELS = [...EASTERN.vowels];
 const nucleiFor = (variant: Variant): string[] => [
   ...SINGLE_VOWELS,
@@ -112,7 +113,7 @@ const ouIntact: Law = (w, variant) => {
   }
 };
 
-const GLIDE_VOWELS = new Set([..."աեէըիոօ"]);
+const GLIDE_VOWELS = new Set("աեէըիոօ");
 
 /** A յ-glide (յ + vowel) is one nucleus and is never split across a break. */
 const yodIntact: Law = (w, variant) => {
@@ -124,9 +125,9 @@ const yodIntact: Law = (w, variant) => {
   }
 };
 
-const EA_EO_SECOND = new Set([..."աօ"]);
+const EA_EO_SECOND = new Set("աօ");
 
-/** Western only: an εα / εօ glide-digraph is one nucleus and is never split. */
+/** Western only: an եա / եօ glide-digraph is one nucleus and is never split. */
 const eaEoIntact: Law = (w, variant) => {
   const frags = syllabify(w, { variant });
   for (let i = 1; i < frags.length; i++) {
@@ -168,8 +169,8 @@ const LAWS: readonly LawSpec[] = [
   { name: "no empty fragment", law: noEmpty, on: ["messy", "structured"] },
   { name: "ու digraph never split", law: ouIntact, on: ["messy", "structured"] },
   { name: "yod-glide never split", law: yodIntact, on: ["messy", "structured"] },
-  // εα / εօ glide-digraph integrity — Western only (Eastern reads them as hiatus).
-  { name: "εα/εօ digraph never split", law: eaEoIntact, on: ["messy", "structured"], variants: ["western"] },
+  // եա / եօ glide-digraph integrity — Western only (Eastern reads them as hiatus).
+  { name: "եա/եօ digraph never split", law: eaEoIntact, on: ["messy", "structured"], variants: ["western"] },
   // Onset maximisation — `structured` is the strongest cluster stressor and
   // strictly supersedes `clean` here, so it runs there alone.
   { name: "non-initial onset <= 1 consonant", law: onsetMax, on: ["structured"] },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hyphenate, syllabify } from "../src/index.js";
+import { breakPoints, hyphenate, syllabify } from "../src/index.js";
 
 const h = (w: string) => hyphenate(w, { hyphen: "-" });
 
@@ -20,7 +20,7 @@ describe("official RA examples (docs/SPEC.md)", () => {
     ["բուրժուական", "բուր-ժու-ա-կան"],
   ];
   for (const [word, expected] of cases) {
-    it(`${word} -> ${expected}`, () => expect(h(word)).toBe(expected));
+    it(`${word} -> ${expected}`, () => { expect(h(word)).toBe(expected); });
   }
 });
 
@@ -40,7 +40,7 @@ describe("gold set", () => {
     ["ուսանող", "ու-սա-նող"],
   ];
   for (const [word, expected] of cases) {
-    it(`${word} -> ${expected}`, () => expect(h(word)).toBe(expected));
+    it(`${word} -> ${expected}`, () => { expect(h(word)).toBe(expected); });
   }
 });
 
@@ -52,13 +52,13 @@ describe("yod-glide: յ + vowel forms one nucleus (Cյ stays together)", () => {
     ["Քոքոբելյան", "Քո-քո-բե-լյան"],
   ];
   for (const [word, expected] of cases) {
-    it(`${word} -> ${expected}`, () => expect(h(word)).toBe(expected));
+    it(`${word} -> ${expected}`, () => { expect(h(word)).toBe(expected); });
   }
 });
 
 describe("monosyllables are never broken", () => {
   for (const w of ["մարդ", "գիրք", "բույս", "ով"]) {
-    it(w, () => expect(h(w)).toBe(w));
+    it(w, () => { expect(h(w)).toBe(w); });
   }
 });
 
@@ -69,8 +69,17 @@ describe("ու digraph is never split", () => {
   });
 });
 
+describe("non-BMP separators keep break offsets codepoint-correct", () => {
+  // Regression: Unit.start once advanced by UTF-16 length, so an astral
+  // separator (2 UTF-16 units, 1 codepoint) shifted every later break point.
+  it("breaks at the same syllable positions after an emoji", () => {
+    expect(syllabify("😀աբակա")).toEqual(["😀ա", "բա", "կա"]);
+    expect(breakPoints("😀աբակա")).toEqual([2, 4]);
+  });
+});
+
 describe("leftmin=1 / rightmin=2", () => {
-  it("allows a single leading vowel", () => expect(h("աթոռ")).toBe("ա-թոռ"));
+  it("allows a single leading vowel", () => { expect(h("աթոռ")).toBe("ա-թոռ"); });
   it("does not strand fewer than rightmin chars", () => {
     // last nucleus too close to the end leaves no valid break
     expect(h("քանի")).toBe("քա-նի");

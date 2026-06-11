@@ -159,7 +159,8 @@ classical-orthography training corpus. Details: [`docs/SPEC.md`](docs/SPEC.md).
 ```sh
 npm install
 npm test          # engine + property-based invariants
-npm run typecheck
+npm run typecheck # src + test
+npm run lint
 npm run build
 ./tools/emit/build-patterns.sh   # regenerate artifacts (needs pypatgen)
 ```

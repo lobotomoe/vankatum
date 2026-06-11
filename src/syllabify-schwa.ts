@@ -17,7 +17,7 @@ const SCHWA = "ը";
 /** Sonority, high → low (5 = glide … 1 = stop/affricate). */
 function sonority(text: string): number {
   const c = text.toLowerCase();
-  if (c === "յ") return 5; // glide
+  if (c === "յ" || c === "ւ") return 5; // glide (ւ occurs standalone in classical orthography)
   if ("րռլ".includes(c)) return 4; // liquid
   if ("մն".includes(c)) return 3; // nasal
   if ("վզսժշղխհֆ".includes(c)) return 2; // fricative
@@ -91,7 +91,7 @@ export function syllabifyWithSchwa(word: string, variant?: Variant): string[] {
   return applySibilantException(syllables);
 }
 
-const SIBILANTS = new Set([..."սշզժ"]);
+const SIBILANTS = new Set("սշզժ");
 
 /**
  * Word-initial sibilant + stop: #SəC → #əSC. A word-initial sibilant before a

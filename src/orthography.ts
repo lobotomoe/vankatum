@@ -24,7 +24,7 @@ export interface Orthography {
 }
 
 /** Single-codepoint nuclei — same inventory in both orthographies (see docs/SPEC.md §Vowel inventory). */
-const VOWEL_SET: ReadonlySet<string> = new Set([..."աեէըիոօ"]);
+const VOWEL_SET: ReadonlySet<string> = new Set("աեէըիոօ");
 
 /** Eastern Armenian, reformed (Abeghyan) orthography. The default. */
 export const EASTERN: Orthography = {

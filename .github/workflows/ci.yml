@@ -1,8 +1,8 @@
 name: ci
 
-# Fast feedback on every change: typecheck, tests, and build. Node-only — the
-# heavy pattern-generation pipeline (Python + pypatgen) runs in release.yml, not
-# here.
+# Fast feedback on every change: typecheck, lint, tests, and build. Node-only —
+# the heavy pattern-generation pipeline (Python + pypatgen) runs in release.yml,
+# not here.
 on:
   push:
     branches: [main]
@@ -22,5 +22,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
       - run: npm run build

@@ -23,7 +23,7 @@ export type UnitKind = "vowel" | "consonant" | "separator";
 
 export interface Unit {
   text: string;
-  /** Start offset in the original string (BMP: codepoint index === UTF-16 index). */
+  /** Start offset in the original string, in codepoints (the indexing of `[...word]`). */
   start: number;
   kind: UnitKind;
 }
@@ -89,21 +89,22 @@ export function tokenize(word: string, orthography: Orthography = EASTERN): Unit
   const chars = [...word];
   const { vowels } = orthography;
   const units: Unit[] = [];
-  let offset = 0;
 
+  // `chars` holds one codepoint per element, so `i` IS the codepoint offset.
+  // (Counting UTF-16 units here would drift after any astral separator, e.g. an
+  // emoji, and misplace every later break point.)
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i] as string;
     const lo = ch.toLowerCase();
 
     // Yod-glide: յ immediately before a vowel nucleus joins it as one nucleus.
-    // A configured vowel digraph (εα / εօ) outranks the glide: in `յեա` the εα
+    // A configured vowel digraph (եա / եօ) outranks the glide: in `յեա` the եա
     // digraph is the nucleus and յ is a plain onset (one syllable, like կեանք),
-    // not a `յե` glide with α stranded.
+    // not a `յե` glide with ա stranded.
     if (lo === YOD && readVowelDigraph(chars, i + 1, orthography) === undefined) {
       const glided = readVowelNucleus(chars, i + 1, vowels);
       if (glided !== undefined) {
-        units.push({ text: ch + glided.text, start: offset, kind: "vowel" });
-        offset += ch.length + glided.text.length;
+        units.push({ text: ch + glided.text, start: i, kind: "vowel" });
         i += glided.length;
         continue;
       }
@@ -112,16 +113,14 @@ export function tokenize(word: string, orthography: Orthography = EASTERN): Unit
     // Classical vowel digraph (եա / եօ): two vowels read as one glide nucleus.
     const digraph = readVowelDigraph(chars, i, orthography);
     if (digraph !== undefined) {
-      units.push({ text: digraph.text, start: offset, kind: "vowel" });
-      offset += digraph.text.length;
+      units.push({ text: digraph.text, start: i, kind: "vowel" });
       i += digraph.length - 1;
       continue;
     }
 
     const nucleus = readVowelNucleus(chars, i, vowels);
     if (nucleus !== undefined) {
-      units.push({ text: nucleus.text, start: offset, kind: "vowel" });
-      offset += nucleus.text.length;
+      units.push({ text: nucleus.text, start: i, kind: "vowel" });
       i += nucleus.length - 1;
       continue;
     }
@@ -134,8 +133,7 @@ export function tokenize(word: string, orthography: Orthography = EASTERN): Unit
     } else {
       kind = "separator";
     }
-    units.push({ text: ch, start: offset, kind });
-    offset += ch.length;
+    units.push({ text: ch, start: i, kind });
   }
 
   return units;

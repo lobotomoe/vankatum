@@ -18,12 +18,12 @@ describe("schwa epenthesis (Dolatian 2023 right-to-left syllabification)", () =>
     ["սրահ", "սը-րահ"],
   ];
   for (const [word, expected] of cases) {
-    it(`${word} -> ${expected}`, () => expect(s(word)).toBe(expected));
+    it(`${word} -> ${expected}`, () => { expect(s(word)).toBe(expected); });
   }
 });
 
 describe("conservation modulo schwa (only ը may be added)", () => {
-  const LETTERS = [..."աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև"];
+  const LETTERS = Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև");
   const cleanWord = fc
     .array(fc.constantFrom(...LETTERS), { minLength: 1, maxLength: 20 })
     .map((a) => a.join(""));
