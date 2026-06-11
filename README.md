@@ -165,6 +165,9 @@ npm run build
 ./tools/emit/build-patterns.sh   # regenerate artifacts (needs pypatgen)
 ```
 
+Cutting a release (npm via OIDC trusted publishing + provenance): see
+[`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## License
 
 MIT.

@@ -1,0 +1,41 @@
+name: publish
+
+# Publish to npm on a version tag, using OIDC trusted publishing — no npm token
+# is stored in the repo. npm verifies this exact workflow against the package's
+# trusted-publisher config and mints a short-lived credential; provenance
+# attestations are generated automatically (publishConfig.provenance = true).
+#
+# One-time bootstrap before this can run: see docs/RELEASING.md. A trusted
+# publisher cannot be configured until the package exists, so v0.1.0 is published
+# manually once, then every later tag flows through here.
+on:
+  push:
+    tags: ["v*"]
+
+# id-token: write is the only extra grant trusted publishing needs (mints the
+# OIDC token). Everything else stays least-privilege.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24 # >= 22.14, required by trusted publishing
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing requires npm >= 11.5.1. Node 24 already bundles a newer
+      # npm, but pin the floor explicitly so a future runner image can't regress it.
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      # prepublishOnly re-runs typecheck + lint + tests, and prepack rebuilds dist,
+      # so a tag can never publish a red or stale tree. provenance is emitted by
+      # default from this OIDC context.
+      - run: npm publish
