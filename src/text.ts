@@ -1,18 +1,19 @@
 /**
  * Text-level hyphenation for the web delivery path.
  *
- * Walks arbitrary text, hyphenates each maximal run of Armenian letters with the
- * pure letter-preserving core, and leaves everything else (spaces, punctuation,
- * other scripts, digits) untouched. Breaks are marked with U+00AD SOFT HYPHEN so
- * the browser only renders a hyphen when it actually wraps the line — the input
- * letters are conserved exactly. See docs/SPEC.md.
+ * Walks arbitrary text, hyphenates each maximal run of Armenian letters (with
+ * their intra-word marks — ինչո՞ւ is one word) using the pure letter-preserving
+ * core, and leaves everything else (spaces, punctuation, other scripts, digits)
+ * untouched. Breaks are marked with U+00AD SOFT HYPHEN so the browser only
+ * renders a hyphen when it actually wraps the line — the input letters are
+ * conserved exactly. See docs/SPEC.md.
  */
 
-import { isArmenianLetter } from "./alphabet.js";
+import { isArmenianLetter, isArmenianWordMark } from "./alphabet.js";
 import { hyphenate, type HyphenateOptions } from "./hyphenate.js";
 
 /** U+00AD: invisible unless the renderer breaks the line here. */
-export const SOFT_HYPHEN = "\u00AD";
+export const SOFT_HYPHEN = "­";
 
 /** Text-mode options. The separator is fixed to the soft hyphen, so {@link HyphenateOptions.hyphen} is not accepted. */
 export type TextOptions = Omit<HyphenateOptions, "hyphen">;
@@ -34,7 +35,7 @@ export function hyphenateText(text: string, options: TextOptions = {}): string {
   };
 
   for (const ch of text) {
-    if (isArmenianLetter(ch)) {
+    if (isArmenianLetter(ch) || isArmenianWordMark(ch)) {
       word += ch;
     } else {
       flush();

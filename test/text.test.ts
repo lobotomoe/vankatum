@@ -34,6 +34,17 @@ describe("hyphenateText — soft-hyphen insertion", () => {
     expect(hyphenateText("որդ")).toBe("որդ");
   });
 
+  it("keeps a word with an intra-word mark as ONE word (UAX #29) and hyphenates it", () => {
+    expect(hyphenateText("Ինչո՞ւ ես")).toBe(`Ին${SOFT_HYPHEN}չո՞ւ ես`);
+    expect(hyphenateText("բուրժուա՞կան")).toBe(`բուր${SOFT_HYPHEN}ժու${SOFT_HYPHEN}ա՞${SOFT_HYPHEN}կան`);
+    // the mark itself never gets a soft hyphen in front of it
+    expect(hyphenateText("ա՜խ, աշակե՞րտ")).toBe(`ա՜խ, ա${SOFT_HYPHEN}շա${SOFT_HYPHEN}կե՞րտ`);
+  });
+
+  it("never hyphenates a letter abbreviation, even suffixed", () => {
+    expect(hyphenateText("ԵԱՀԿ-ի նստաշրջանը")).toBe(`ԵԱՀԿ-ի ${hyphenate("նստաշրջանը", { hyphen: SOFT_HYPHEN })}`);
+  });
+
   it("honours leftmin / rightmin", () => {
     const tight = hyphenateText("աշակերտ", { rightmin: 5 });
     const loose = hyphenateText("աշակերտ", { rightmin: 2 });
@@ -48,12 +59,12 @@ describe("hyphenateText — conservation invariant", () => {
   it("removing every soft hyphen restores the original text exactly", () => {
     const segment = fc.oneof(
       fc
-        .array(fc.constantFrom(...Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև")), {
+        .array(fc.constantFrom(...Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև՞՛՜՚")), {
           minLength: 1,
           maxLength: 12,
         })
         .map((a) => a.join("")),
-      fc.constantFrom(" ", "  ", "\n", "։", ", ", "web", "42", "(", ")"),
+      fc.constantFrom(" ", "  ", "\n", "։", "՝", ", ", "web", "42", "(", ")", "ԵԱՀԿ", "ՄԱԿ-ի"),
     );
     fc.assert(
       fc.property(fc.array(segment, { maxLength: 8 }), (parts) => {
@@ -65,11 +76,12 @@ describe("hyphenateText — conservation invariant", () => {
   });
 
   it("never emits a soft hyphen adjacent to a non-letter boundary", () => {
-    const out = hyphenateText("ա, աշակերտ։");
-    // no soft hyphen should sit next to the comma, space, or ։
+    const out = hyphenateText("ա, աշակերտ։ ինչո՞ւ");
+    // no soft hyphen should sit next to the comma, space, ։ or before the ՞
     expect(out.includes(SOFT_HYPHEN + ",")).toBe(false);
     expect(out.includes(SOFT_HYPHEN + " ")).toBe(false);
     expect(out.includes(SOFT_HYPHEN + "։")).toBe(false);
     expect(out.includes(" " + SOFT_HYPHEN)).toBe(false);
+    expect(out.includes(SOFT_HYPHEN + "՞")).toBe(false);
   });
 });
