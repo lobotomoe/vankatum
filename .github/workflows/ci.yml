@@ -45,7 +45,8 @@ jobs:
       # publint: package.json / exports / files sanity. attw: the types resolve
       # under every module-resolution mode an ESM-only package supports.
       - run: npm run check:pack
-      - run: npm pack --pack-destination pack
+      # npm pack does not create the destination directory.
+      - run: mkdir -p pack && npm pack --pack-destination pack
       - uses: actions/upload-artifact@v7
         with:
           name: tarball
