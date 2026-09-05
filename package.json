@@ -1,6 +1,6 @@
 {
   "name": "vankatum",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Reliable Armenian (hy) hyphenation for browsers and typesetting — syllabification-based, Eastern (reformed) and Western (classical) orthography.",
   "type": "module",
   "license": "MIT",
