@@ -52,7 +52,7 @@
     "check:types": "attw --pack . --profile esm-only",
     "check:pack": "npm run check:publint && npm run check:types",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run check:publint"
+    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build && npm run check:publint"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
