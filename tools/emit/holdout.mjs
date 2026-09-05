@@ -30,7 +30,7 @@ const WORKDIR = join(ROOT, "playground/holdout");
 const PYPATGEN = process.env.PYPATGEN ?? join(ROOT, "playground/.venv/bin/pypatgen");
 
 // Same lowercase-Armenian, >=2-letter filter as the labeller.
-const VALID = /^[ա-ֆ]{2,}$/u;
+const VALID = /^[ա-ֈ]{2,}$/u;
 // Same pattern-training schedule as build-patterns.sh — must match for the number
 // to describe the shipped patterns.
 const SCHEDULE = ["2-4 1:2:20", "2-4 2:1:8", "2-6 1:4:8", "2-6 3:2:4", "2-8 1:2:3", "2-8 3:1:1"];

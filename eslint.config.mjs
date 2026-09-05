@@ -2,10 +2,11 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 // Lints the shipped engine and its tests with full type information.
-// tools/ and benchmarks/ are plain-JS build tooling, exercised by their own
-// verify/holdout gates; playground/ and dist/ are not source.
+// tools/, benchmarks/ and scripts/ are plain-JS tooling, exercised by their own
+// gates (verify/holdout, the benchmark, the CI tarball smoke test); playground/
+// and dist/ are not source.
 export default tseslint.config(
-  { ignores: ["dist/", "tools/", "benchmarks/", "playground/", "eslint.config.mjs"] },
+  { ignores: ["dist/", "tools/", "benchmarks/", "scripts/", "playground/", "eslint.config.mjs"] },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
   {

@@ -23,7 +23,7 @@ export interface Orthography {
   vowelDigraphs: ReadonlyArray<readonly [string, string]>;
 }
 
-/** Single-codepoint nuclei — same inventory in both orthographies (see docs/SPEC.md §Vowel inventory). */
+/** Single-codepoint nuclei — same inventory in both orthographies (see docs/SPEC.md §Nuclei). */
 const VOWEL_SET: ReadonlySet<string> = new Set("աեէըիոօ");
 
 /** Eastern Armenian, reformed (Abeghyan) orthography. The default. */
@@ -49,6 +49,15 @@ export const WESTERN: Orthography = {
   ],
 };
 
-/** Resolve a variant name (default eastern) to its orthography config. */
-export const resolveOrthography = (variant?: Variant): Orthography =>
-  variant === "western" ? WESTERN : EASTERN;
+/** Resolve a variant name (default eastern) to its orthography config. Unknown names throw. */
+export function resolveOrthography(variant: Variant = "eastern"): Orthography {
+  switch (variant) {
+    case "eastern":
+      return EASTERN;
+    case "western":
+      return WESTERN;
+  }
+  // Only reachable from untyped (JavaScript) callers: fail loudly instead of
+  // silently hyphenating with the wrong orthography.
+  throw new RangeError(`unknown orthography variant: ${String(variant)}`);
+}

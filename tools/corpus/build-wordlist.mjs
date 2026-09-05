@@ -21,7 +21,7 @@ const CORPUS = join(ROOT, "playground/corpus");
 const WIKTIONARY = join(ROOT, "playground/reference/wiktionary/wiktionary-hy.tsv");
 const OUT = join(ROOT, "corpus/wordlist.txt");
 
-const VALID = /^[ա-ֆ]{2,}$/u;
+const VALID = /^[ա-ֈ]{2,}$/u;
 
 async function readLines(path) {
   try {

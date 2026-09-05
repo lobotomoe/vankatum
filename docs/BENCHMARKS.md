@@ -51,12 +51,22 @@ The reference engines pass every single-consonant and monosyllable case and
 Clusters are the most common real break type, so this is a systematic gap, not an
 edge case.
 
+## Against human-curated syllabifications
+
+`playground/harness/benchmark.mjs` compares the engine with Wiktionary's
+hyphenation data (2,204 words): **96.5%** exact on the 1,789 words in the
+letter-preserving scope; the schwa mode reproduces **87.3%** of the 418 schwa
+words. What remains is morphology (`Պետ-րոս-յան`, compound boundaries) and the
+`ե-վ` split of `և` that only the `.dic` can express. Breakdown and the rule
+questions this data settled: [`SOURCES.md`](SOURCES.md) §B.
+
 ## Generated-pattern quality
 
 The pattern files vankatum emits reproduce the engine **100%** on the training
-corpus and generalise to unseen words at **98.5% recall / 99.6% precision** —
-held-out on an 8,341-word split selected by content hash, never seen in training,
-with 95.6% of those words broken exactly right. Reproduce with
-`node tools/emit/holdout.mjs` (needs pypatgen). The schwa `.dic` rules add
-**0 spurious `ը`** across ~65k non-schwa words while covering 100% of
-single-schwa-break words. Methodology and corpora: [`SOURCES.md`](SOURCES.md).
+corpus (87,452 words) and generalise to unseen words at **98.5% recall / 99.6%
+precision** — held-out on an 8,687-word split selected by content hash, never
+seen in training, with 95.6% of those words broken exactly right. Reproduce with
+`node tools/emit/holdout.mjs` (needs pypatgen). The `.dic` non-standard rules
+add **0 spurious `ը`** across ~66k non-schwa words while covering 100% of
+single-schwa-break words, plus the `և → ե-վ` split before vowels. Methodology
+and corpora: [`SOURCES.md`](SOURCES.md).

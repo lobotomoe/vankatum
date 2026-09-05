@@ -14,7 +14,8 @@ Two variants, selectable from one core:
 no minimum-letter rule, so a single vowel may legitimately stand at a line end
 (`ա-թոռ`, `ա-շա-կերտ`) — unlike English, which forbids it (see References).
 Raising `leftmin` to 2 is a print house-style choice applied at render time, not
-an orthographic requirement.
+an orthographic requirement. Both minima count letters, per word, and must be
+non-negative integers (anything else is rejected, not silently coerced).
 
 ## Nuclei (syllable count = nucleus count)
 
@@ -40,6 +41,31 @@ Geminates fall out of the k≥2 rule automatically: բեր-րի.
 
 A word with one nucleus is a monosyllable and never breaks: մարդ, գիրք.
 
+### Ligature և before a vowel
+
+`և` + vowel is pronounced /ev/ + vowel with the `վ` as the onset of the next
+syllable (հե-տե-վել, Ե-րե-վան, ա-րե-վելք) — the k=1 rule applied to the
+ligature's hidden `վ`. The syllable boundary therefore lies **inside** the
+ligature, and the only correct break spells it out as `ե-վ`. That changes
+letters, so the letter-preserving core emits **no break** there at all
+(`հե-տևել`, `Ե-րևան`): the alternative `հե-տև-ել` would strand the `վ` at the
+line end, the same error as `աշակ-երտ`. The Wiktionary gold confirms it — every
+`ևV` word is hyphenated as `ե-վ`, never as `և-V`. The `ե-վ` break is delivered
+where letters may change: the `.dic` artifact (libhyphen non-standard rules).
+`և` before a consonant, or word-final, stays whole and breaks normally
+(`թև-ճակ`, `բա-րև-ներ`, `տե-րև`).
+
+## Intra-word marks
+
+Armenian writes its intonation marks inside the word, on the stressed vowel:
+`ինչո՞ւ`, `ո՛չ`, `ա՜խ`, and in classical spelling the elision apostrophe
+`կ՚ուզեմ`. UAX #29 word segmentation keeps such a token as one word, so the
+engine sees through the marks: `ՙ ՚ ՛ ՜ ՞ ՟` (U+0559, U+055A–U+055C, U+055E,
+U+055F) are transparent to syllabification and stay attached to the letter they
+follow (`ին-չո՞ւ`, `բուր-ժու-ա՞-կան`; the `ու` in `ո՞ւ` is still one nucleus).
+The բութ `՝` (U+055D) and the full stop `։` are inter-word punctuation and split
+words as usual.
+
 ## Unwritten schwa (ը) epenthesis
 
 The schwa /ə/ is pronounced but not written between many consonant clusters; it
@@ -61,6 +87,14 @@ Sonority, high → low: vowel > glide (`յ ւ`) > liquid (`ր ռ լ`) > nasal (`
 fricative (`վ զ ս ժ շ ղ խ հ ֆ`) > stop/affricate (`բ պ փ գ կ ք դ տ թ ձ ծ ց ջ ճ չ`).
 A two-consonant coda `C1C2` (C1 nearer the nucleus) is legal iff
 `sonority(C1) > sonority(C2)`.
+
+**Appendix ք.** A word-final `ք` (the old plural / case suffix) is extrasyllabic:
+it closes any coda regardless of sonority and does not count towards the
+two-consonant limit — ոտք, գնացք, կռիչք, աշխատանք, ա-ռանցք-ներ — instead of
+taking a schwa of its own (`*գը-նա-ցըք`). Empirical basis: in the Wiktionary gold
+not one of the 17 non-falling `Cք` finals (ցք, ծք, չք, թք, ջք, …) writes a schwa,
+against 84 that do not. A `ք` that is not the outermost consonant is an ordinary
+stop (ոտ-քըս).
 
 ### Algorithm (right-to-left)
 
@@ -84,39 +118,58 @@ attested in Dolatian and reproducible by the procedure:
 
 `#[ս զ շ ժ] + stop` puts `ə` **before** the sibilant (the sibilant syllabifies as
 a coda, not an onset): սկիզբ→`ըս-կիզբ`, ստանալ→`ըս-տանալ`, զբոսանք→`ըզ-բոսանք`,
-շտապել→`ըշ-տապել`. This overrides the general `C1ə` placement word-initially.
+շտապել→`ըշ-տապել` (RA rule: «Զբ, զգ, շտ, սպ, սկ, ստ … ը-ն գրվում է բառի առաջին
+բաղաձայնից առաջ»). This overrides the general `C1ə` placement word-initially. It
+applies only to an **epenthetic** schwa followed by a syllable that begins with a
+stop/affricate — a written `ը` (`շը…`) and a following vowel or sonorant
+(սը-րահ) are untouched.
 
-### Output: discretionary breaks — a separate mode (ADR)
+### Output: character-changing breaks — a separate mode (ADR)
 
 A schwa break **writes `ը`** at line end + next-line start (հետաքըր-քըրվել) but the
 word carries no `ը` when unbroken (հետաքրքրվել). So it changes characters — it is a
 TeX-style **discretionary break** `\discretionary{pre}{post}{nobreak}`, not a plain
-break point.
+break point. The `ե-վ` split of `և` (above) is the second break of this kind.
 
-**Decision:** schwa is an **additional output mode**, kept out of the pure core.
-- `syllabify` / `hyphenate` stay strictly letter-preserving (the conservation
-  invariant is sacred there). They emit only break *positions*; for clusters that
-  would require epenthesis they simply produce no break (safe under-break).
-- A separate `hyphenateOrthographic` (name TBD) returns **discretionary breaks**
-  `{ index, pre, post, nobreak }`, where the schwa is materialised in `pre`/`post`.
-  This is what TeX patterns and justified print need; soft-hyphen/CSS consumers
-  use the pure mode.
+**Decision:** character-changing breaks are an **additional output mode**, kept out
+of the pure core.
+- `syllabify` / `hyphenate` / `hyphenateText` stay strictly letter-preserving (the
+  conservation invariant is sacred there). They emit only break *positions*; for
+  clusters that would require epenthesis, and for `և` before a vowel, they simply
+  produce no break (safe under-break).
+- `syllabifyWithSchwa` is the orthographic mode: it returns syllables with the
+  schwa **materialised** as `ը` (գը-րել), for syllabification, teaching and as the
+  engine behind the character-changing rules.
+- Downstream, the character-changing breaks ship only where the format can express
+  them: libhyphen **non-standard hyphenation** in `hyph_hy_AM.dic` (schwa rules
+  from `syllabifyWithSchwa`, plus the seven `և`+vowel → `ե-վ` rules). TeX/hypher
+  patterns and soft hyphens cannot change letters and carry neither. A general
+  discretionary-break API (`{ index, pre, post, nobreak }`) is future work.
 
 The two modes share the same right-to-left syllabifier; only the rendering differs.
 
-**Validation:** the 415 schwa words in the Wiktionary gold set
-(`playground/reference/wiktionary/`) are the empirical oracle — implement the
-procedure, then confirm/adjust the sonority classes and the sibilant rule against
-them before claiming correctness.
+**Validation:** the ~418 schwa words in the Wiktionary gold set
+(`playground/reference/wiktionary/`, harness `playground/harness/schwa-validate.mjs`)
+are the empirical oracle. The engine reproduces **87.3%** of them exactly. The
+residue is dominated by morphology the phonological pass cannot see — compound and
+prefix boundaries (բեն-զա-լը-ցա-կա-յան, ան-հը-րա-ժեշտ, հա-տա-պը-տուղ),
+reduplicated verbs (կըռ-կը-ռալ) and loanwords pronounced without a schwa
+(տրամ-վայ, ֆլեյ-տա) — the morphological layer below is where those belong. The
+gold is itself inconsistent on the word-initial sibilant rule (ըզ-գուշացում vs
+սը-պաս), so the RA rule stands as written.
 
 ## Compounds & prefixes — phase 2 (optional)
 
-Official rules permit **either** syllabic **or** morphological breaking: ան-ուրանալի *or* անու-րանալի; կաթն-ատամ *or* կաթնա-տամ. Phase 1 emits the syllabic break; a morphological exception layer can later prefer morpheme boundaries.
+Official rules permit **either** syllabic **or** morphological breaking: ան-ուրանալի *or* անու-րանալի; կաթն-ատամ *or* կաթնա-տամ. Phase 1 emits the syllabic break; a morphological exception layer can later prefer morpheme boundaries. The same layer would cover the surname / adjective suffixes `-յան`, `-յա`, `-յալ`, which the Wiktionary gold often divides morphologically (Պետ-րոս-յան) while the syllabic rule keeps `Cյ` together (Պետ-րո-սյան, like կյանք, բյուր, -ու-թյուն).
 
 ## Never break
 
-- Acronyms / all-caps letter abbreviations: ԽՍՀՄ, ԱՊՀ.
-- Inside `ու` or `և`.
+- Letter abbreviations / acronyms: ԽՍՀՄ, ԱՊՀ, ԵԱՍԿ (RA rule: «Տառային և
+  վանկատառային հապավումները չեն տողադարձվում»). Implemented as: an all-uppercase
+  word of two or more letters is never broken (a capitalised word such as Երևան
+  hyphenates normally). All-caps running text is therefore not hyphenated either —
+  a wrong break is a visible error, a missed one is not.
+- Inside `ու` or `և` (see §Ligature և before a vowel for the `ևV` consequence).
 
 ## Western / classical orthography variant
 
@@ -144,7 +197,7 @@ sonority classes are shared unchanged.
 **Caveat (provisional).** `եա`/`եօ` are merged whenever the two letters are
 adjacent. Across a morpheme boundary they can be genuine hiatus (`/e.a/`), which
 this purely-orthographic pass cannot detect; the optional morphological layer
-(below) would resolve those. The Western gold set (`test/western.gold.ts`) is
+(above) would resolve those. The Western gold set (`test/western.gold.ts`) is
 hand-derived from the rules and **pending native-speaker review**. Reformed
 ↔ classical *transliteration* is out of scope: the engine hyphenates classical
 text as written, it does not convert orthographies.
@@ -160,3 +213,4 @@ Sources for the classical↔reformed correspondences: en.wikipedia.org/wiki/Arme
 - Տողադարձ — Armenian Wikipedia: https://hy.wikipedia.org/wiki/Տողադարձ
 - «Տողադարձի մասին» կանոնները (RA Minister of Education order): http://www.irtek.am/views/act.aspx?aid=19824
 - W3C Armenian orthography notes: https://r12a.github.io/scripts/armn/hy.html
+- UAX #29 Unicode Text Segmentation (word boundaries; Armenian marks are word-internal): https://www.unicode.org/reports/tr29/

@@ -10,9 +10,9 @@
  * Western variant did not weaken any universal guarantee (conservation above all).
  *
  * Generator rationale:
- *   messy      — any string (letters, both cases, separators, noise). For the
- *                universal laws this is a strict superset of `clean`, so `clean`
- *                is not re-run on them.
+ *   messy      — any string (letters, both cases, separators, intra-word marks,
+ *                noise). For the universal laws this is a strict superset of
+ *                `clean`, so `clean` is not re-run on them.
  *   structured — deliberately emits ու digraphs, the և ligature, յ-glides,
  *                (Western) եա/եօ glide-digraphs, consonant clusters and hiatus;
  *                the strongest stressor for the digraph/glide and onset laws.
@@ -23,7 +23,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { breakPoints, syllabify, EASTERN, resolveOrthography, type Variant } from "../src/index.js";
-import { tokenize } from "../src/alphabet.js";
+import { isArmenianWordMark, LIGATURE_EW, tokenize } from "../src/alphabet.js";
 
 const RUNS = 5000;
 const VARIANTS = ["eastern", "western"] as const satisfies ReadonlyArray<Variant>;
@@ -31,6 +31,8 @@ const VARIANTS = ["eastern", "western"] as const satisfies ReadonlyArray<Variant
 // Lowercase Armenian letters incl. ligature և and yiwn ւ (so ու digraphs form).
 const LOWER = Array.from("աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆև");
 const UPPER = Array.from("ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ");
+// The intra-word marks: transparent to syllabification, must be conserved.
+const MARKS = Array.from("՛՜՞՚");
 // 😀 is astral (2 UTF-16 units): catches any UTF-16/codepoint indexing drift.
 const NOISE = Array.from(" -.,՝՜԰0123abcЖ😀\n\t");
 
@@ -38,8 +40,12 @@ const cleanWord = fc
   .array(fc.constantFrom(...LOWER), { minLength: 1, maxLength: 24 })
   .map((a) => a.join(""));
 
+const upperWord = fc
+  .array(fc.constantFrom(...UPPER), { minLength: 2, maxLength: 12 })
+  .map((a) => a.join(""));
+
 const messyText = fc
-  .array(fc.constantFrom(...LOWER, ...UPPER, ...NOISE), { minLength: 1, maxLength: 30 })
+  .array(fc.constantFrom(...LOWER, ...UPPER, ...MARKS, ...NOISE), { minLength: 1, maxLength: 30 })
   .map((a) => a.join(""));
 
 // Syllable-structured generator: deliberately produces digraphs (ու), the
@@ -74,8 +80,26 @@ const generatorsFor = (variant: Variant) =>
   }) as const;
 type GeneratorName = keyof ReturnType<typeof generatorsFor>;
 
-const nucleusCount = (w: string, variant: Variant) =>
-  tokenize(w, resolveOrthography(variant)).filter((u) => u.kind === "vowel").length;
+/**
+ * Fragments a word must split into with no minima: one per nucleus, except a
+ * vowel right after the ligature և — its boundary lies inside the ligature, so
+ * no letter-preserving break exists there (docs/SPEC.md).
+ */
+const expectedFragments = (w: string, variant: Variant): number => {
+  let nuclei = 0;
+  let suppressed = 0;
+  let afterLigature = false;
+  for (const u of tokenize(w, resolveOrthography(variant))) {
+    if (u.kind !== "vowel") {
+      afterLigature = false;
+      continue;
+    }
+    nuclei++;
+    if (afterLigature) suppressed++;
+    afterLigature = u.text.toLowerCase() === LIGATURE_EW;
+  }
+  return Math.max(1, nuclei - suppressed);
+};
 
 const leadingConsonants = (fragment: string, variant: Variant): number => {
   let n = 0;
@@ -137,6 +161,16 @@ const eaEoIntact: Law = (w, variant) => {
   }
 };
 
+/** The ligature և is never followed directly by a break into a vowel (no break inside the ligature). */
+const ligatureIntact: Law = (w, variant) => {
+  const frags = syllabify(w, { variant, leftmin: 0, rightmin: 0 });
+  for (let i = 1; i < frags.length; i++) {
+    const last = [...(frags[i - 1] as string)].at(-1)?.toLowerCase();
+    const first = [...(frags[i] as string)][0]?.toLowerCase() ?? "";
+    expect(last === LIGATURE_EW && (GLIDE_VOWELS.has(first) || first === LIGATURE_EW)).toBe(false);
+  }
+};
+
 /** Every non-initial fragment carries an onset of at most one consonant. */
 const onsetMax: Law = (w, variant) => {
   const frags = syllabify(w, { variant });
@@ -145,10 +179,10 @@ const onsetMax: Law = (w, variant) => {
   }
 };
 
-/** With no min constraints, there is exactly one fragment per nucleus (>=1). */
+/** With no min constraints, there is exactly one fragment per breakable nucleus (>=1). */
 const completeness: Law = (w, variant) => {
   const frags = syllabify(w, { variant, leftmin: 0, rightmin: 0 });
-  expect(frags.length).toBe(Math.max(1, nucleusCount(w, variant)));
+  expect(frags.length).toBe(expectedFragments(w, variant));
 };
 
 // --- The matrix -----------------------------------------------------------
@@ -169,14 +203,15 @@ const LAWS: readonly LawSpec[] = [
   { name: "no empty fragment", law: noEmpty, on: ["messy", "structured"] },
   { name: "ու digraph never split", law: ouIntact, on: ["messy", "structured"] },
   { name: "yod-glide never split", law: yodIntact, on: ["messy", "structured"] },
+  { name: "և never broken before a vowel", law: ligatureIntact, on: ["messy", "structured"] },
   // եա / եօ glide-digraph integrity — Western only (Eastern reads them as hiatus).
   { name: "եա/եօ digraph never split", law: eaEoIntact, on: ["messy", "structured"], variants: ["western"] },
   // Onset maximisation — `structured` is the strongest cluster stressor and
   // strictly supersedes `clean` here, so it runs there alone.
   { name: "non-initial onset <= 1 consonant", law: onsetMax, on: ["structured"] },
   // Completeness — `clean` uniquely reaches zero-nucleus words; `structured`
-  // covers heavy digraph/glide/cluster words.
-  { name: "fragments == nuclei (no mins)", law: completeness, on: ["clean", "structured"] },
+  // covers heavy digraph/glide/cluster/ligature words.
+  { name: "fragments == breakable nuclei (no mins)", law: completeness, on: ["clean", "structured"] },
 ];
 
 describe("core syllabifier invariants", () => {
@@ -196,6 +231,47 @@ describe("core syllabifier invariants", () => {
       }
     }
   }
+});
+
+// The laws below are variant-independent by construction (they act before or
+// after tokenisation), so `eastern` covers them.
+
+describe("letter abbreviations", () => {
+  it("an all-caps word of >= 2 letters is never broken", () => {
+    fc.assert(
+      fc.property(upperWord, (w) => {
+        expect(syllabify(w, { leftmin: 0, rightmin: 0 })).toEqual([w]);
+      }),
+      { numRuns: RUNS },
+    );
+  });
+});
+
+describe("intra-word marks", () => {
+  // A word with marks inserted anywhere: strip the marks from its fragments and
+  // you get exactly the fragments of the bare word — the marks change nothing
+  // about where breaks fall, and they are conserved in place.
+  const markedWord = fc
+    .tuple(cleanWord, fc.array(fc.tuple(fc.nat(24), fc.constantFrom(...MARKS)), { maxLength: 3 }))
+    .map(([word, inserts]) => {
+      const chars = [...word];
+      for (const [pos, mark] of [...inserts].sort((a, b) => b[0] - a[0])) {
+        chars.splice(Math.min(pos, chars.length), 0, mark);
+      }
+      return { word, marked: chars.join("") };
+    });
+  const stripMarks = (s: string) => [...s].filter((c) => !isArmenianWordMark(c)).join("");
+
+  it("are transparent to syllabification and conserved", () => {
+    fc.assert(
+      fc.property(markedWord, ({ word, marked }) => {
+        const frags = syllabify(marked);
+        expect(frags.join("")).toBe(marked);
+        expect(frags.map(stripMarks)).toEqual(syllabify(word));
+      }),
+      { numRuns: RUNS },
+    );
+  });
 });
 
 describe("leftmin / rightmin", () => {
