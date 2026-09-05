@@ -19,8 +19,9 @@ npm cannot register a trusted publisher for a package that does not exist yet, s
    npm publish --provenance=false
    ```
    `access: public` and the version come from `package.json`; `prepublishOnly`
-   (typecheck + lint + tests + publint) and `prepack` (clean build) run
-   automatically. The arethetypeswrong check runs only in CI (`check:pack`): it
+   (typecheck + lint + tests + build + publint — it builds itself because it
+   runs before `prepack`, and publint checks that the exported files exist) and
+   `prepack` (clean build) run automatically. The arethetypeswrong check runs only in CI (`check:pack`): it
    packs the tarball itself, which cannot nest inside `npm publish`.
 3. On npmjs.com open **the package** → `Settings` → `Trusted Publisher` and add:
    - **Publisher:** GitHub Actions
