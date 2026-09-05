@@ -31,8 +31,9 @@ pattern files for the whole ecosystem.
 npm install vankatum
 ```
 
-ESM-only (Node 18+; from CommonJS use a dynamic `import()`), TypeScript types
-included, zero runtime dependencies.
+ESM-only, Node 18+, TypeScript types included, zero runtime dependencies. From
+CommonJS, `require("vankatum")` works on Node 20.19+ / 22.12+ (`require(esm)`);
+older Node needs a dynamic `import()`.
 
 ## Usage (JavaScript / TypeScript)
 
@@ -53,18 +54,38 @@ hyphenateText("Հայերենի տողադարձը");  // "Հայերենի տո
 syllabifyWithSchwa("գրել");  // ["գը", "րել"]
 ```
 
+What the engine gets right that patterns do not:
+
+- **Consonant clusters** — only the last consonant of a cluster moves to the
+  next line (`կանգ-նել`, `հարց-նել`, `ա-ռանցք-ներ`).
+- **`ու`, `յ`-glides and `և`** are single nuclei and never split (`կա-տու`,
+  `ա-ծան-ցյալ`, `բա-րև-ներ`).
+- **`և` before a vowel** has its syllable boundary *inside* the ligature
+  (`Ե-րե-վան`), so the letter-preserving API places no break there
+  (`Ե-րևան`, never `Ե-րև-ան`); the `.dic` artifact spells out the `ե-վ` break.
+- **Intra-word marks** `՞ ՛ ՜ ՚` sit inside Armenian words (`ինչո՞ւ`) and are
+  transparent: `hyphenateText("Ինչո՞ւ ես")` breaks `Ին-չո՞ւ`, keeping the mark
+  on its vowel and the `ու` whole.
+- **Letter abbreviations** are never hyphenated (`ԵԱՀԿ`, `ԱՊՀ`, `ՆԱՍԱ`): an
+  all-caps word is left alone, per the RA rule.
+- **Epenthetic `ը`** is predicted by right-to-left syllabification
+  (`Հըն-դըս-տան`, `ըս-կիզբ`), with the word-final `ք` treated as an appendix
+  (`գը-նացք`, not `գը-նա-ցըք`).
+
 ### Options
 
 `hyphenate`, `syllabify`, and `breakPoints` take `{ leftmin, rightmin, hyphen, variant }`:
 
 | Option     | Default      | Meaning                                  |
 |------------|--------------|------------------------------------------|
-| `leftmin`  | `1`          | Minimum characters before the first break |
-| `rightmin` | `2`          | Minimum characters after the last break   |
+| `leftmin`  | `1`          | Minimum letters before the first break (per word) |
+| `rightmin` | `2`          | Minimum letters after the last break (per word) |
 | `hyphen`   | `"-"`        | String inserted at each break (`hyphenate` only) |
 | `variant`  | `"eastern"`  | Orthography: `"eastern"` (reformed) or `"western"` (classical) |
 
 `hyphenateText` always uses the soft hyphen and accepts `{ leftmin, rightmin, variant }`.
+Minima must be non-negative integers and the variant must be one of the two names;
+anything else throws a `RangeError` rather than silently falling back.
 
 For `hyphenate`, `syllabify`, and `hyphenateText`, letter conservation is an
 enforced invariant: removing the inserted hyphens (or soft hyphens) always yields
@@ -84,10 +105,11 @@ patterns are the keystone; the others derive from them.
 | `hyphenation.hy.json` | hypher and the JS ecosystem | `new Hypher(patterns)` — see below. |
 | `hyph-hy.{pat,chr,hyp}.txt` | Chromium / Android (Minikin) | The `.hyb` input trio. Build with `mk_hyb_file.py hyph-hy.pat.txt hyph-hy.hyb`. |
 
-The `.dic` is the only artifact that carries the epenthetic schwa (`գրել ->
-գը-րել`), because schwa hyphenation changes characters and only libhyphen's
-non-standard hyphenation can express it. It is verified to load and hyphenate in
-real libhyphen.
+The `.dic` is the only artifact that carries the two **character-changing**
+breaks — the epenthetic schwa (`գրել -> գը-րել`) and the `և` ligature spelled out
+before a vowel (`Երևան -> Ե-րե-վան`) — because only libhyphen's non-standard
+hyphenation can express them. Both rule sets are verified to load and hyphenate
+in real libhyphen semantics (via pyphen).
 
 ### hypher (web)
 
@@ -114,15 +136,21 @@ Chromium/Android build can compile a `.hyb` from whatever pattern subset fits.
 On a gold set of cluster words, vankatum scores **14/14** where the shared
 reference patterns (hypher, Hyphenopoly, and the rest) score **7/14** — they fail
 every cluster. Reproduce it: `cd benchmarks && npm install && node compare.mjs`
-(details in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)). Patterns generated
+(details in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)). Against Wiktionary's
+human-curated syllabifications the engine is exact on **96.5%** of the 1,789
+words in its letter-preserving scope; the remaining mismatches are morphological
+divisions (`Պետ-րոս-յան`) the syllabic rule does not attempt, and the `ե-վ`
+split of `և` that only the `.dic` can express. Patterns generated
 from the engine reproduce it **100%** on the training corpus and generalise to
-unseen words at **98.5% recall / 99.6% precision** (measured on an 8.3k-word
+unseen words at **98.5% recall / 99.6% precision** (measured on an 8.7k-word
 held-out split; 95.6% of those words break exactly right — reproduce with
 `node tools/emit/holdout.mjs`). Precision is prioritised — a wrong break is a
 visible error, a missed break is invisible.
 
-Schwa in the `.dic`: zero spurious `ը` across ~65k non-schwa words, and 100% of
-single-schwa-break words covered (multi-break words fall back to the runtime
+Schwa: the syllabifier reproduces **87.3%** of the 418 Wiktionary schwa words
+exactly (the residue is mostly compound boundaries and loanwords). In the `.dic`
+there are zero spurious `ը` across ~66k non-schwa corpus words and 100% of
+single-schwa-break words are covered (multi-break words fall back to the runtime
 engine).
 
 Numbers, corpora, and provenance: [`docs/SOURCES.md`](docs/SOURCES.md). The
@@ -132,7 +160,7 @@ linguistic contract: [`docs/SPEC.md`](docs/SPEC.md).
 
 The TypeScript engine is the single source of truth. A reproducible pipeline
 labels a corpus (Armenian legal texts, the Hunspell lexicon, Wikipedia /
-Wikisource, subtitle frequency lists, Wiktionary — ~84k words across six
+Wikisource, subtitle frequency lists, Wiktionary — ~87k words across six
 registers) with the engine, learns Liang patterns with `patgen`, verifies that
 the patterns reproduce the engine, and derives the downstream formats.
 
@@ -166,8 +194,15 @@ npm test          # engine + property-based invariants
 npm run typecheck # src + test
 npm run lint
 npm run build
-./tools/emit/build-patterns.sh   # regenerate artifacts (needs pypatgen)
+npm run check:pack               # publint + arethetypeswrong on the packed tarball
+
+# regenerate artifacts (needs pypatgen)
+python3 -m venv playground/.venv && playground/.venv/bin/pip install pypatgen
+./tools/emit/build-patterns.sh
 ```
+
+CI runs the suite on Node 20/22/24 and smoke-tests the packed tarball on every
+Node line in `engines` (18–24).
 
 Cutting a release (npm via OIDC trusted publishing + provenance): see
 [`docs/RELEASING.md`](docs/RELEASING.md).
