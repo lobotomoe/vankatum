@@ -1,28 +1,37 @@
 /**
- * Schwa (ը) epenthesis as libhyphen non-standard hyphenation rules.
+ * Character-changing breaks as libhyphen NON-STANDARD hyphenation rules.
  *
  * Liang patterns are letter-preserving, so the .tex/.json/.hyb artifacts cannot
- * express the epenthetic ը that Armenian writes at a break inside a vowelless
- * consonant cluster (գրել -> գը-րել, հնդստան -> հըն-/հնդըս-). libhyphen's
- * NON-STANDARD hyphenation can (it changes characters at the break), so this
- * emitter appends schwa rules to hyph_hy_AM.dic only. Format (see SOURCES.md §F):
+ * express the two Armenian breaks that change letters:
  *
- *     <left>C1<digit>C2/<displayed-left-syllable>=,<start>,<cut>
+ *   - the epenthetic ը written inside a vowelless consonant cluster
+ *     (գրել -> գը-րել, հնդստան -> հըն-/հնդըս-), and
+ *   - the ligature և split before a vowel (Երևան -> Ե-րե-վան): the syllable
+ *     boundary lies between its ե and վ, so the ligature is spelled out.
  *
- * Each schwa break becomes one LOCAL pattern keyed by its own cluster, so a word
- * with several schwa breaks (հըն-դըս-տան) gets several non-colliding rules.
- * Patterns whose key maps to conflicting changes anywhere in the corpus are
- * dropped (precision-first: never emit a rule that could insert a wrong schwa).
+ * libhyphen's NON-STANDARD hyphenation can (it changes characters at the break),
+ * so this emitter appends both rule sets to hyph_hy_AM.dic only. Format (see
+ * SOURCES.md §F):
  *
- * Usage: node tools/emit/schwa-dic.mjs <hyph_hy_AM.dic>   (appends in place)
+ *     <pattern>/<replacement>,<start>,<cut>
+ *
+ * where the odd digit in <pattern> marks the break, <replacement> is the text
+ * shown instead of the <cut> letters starting at 1-based letter <start> of the
+ * pattern, with "=" at the line break. Verified against libhyphen semantics via
+ * pyphen (which implements the same rules).
+ *
+ * Usage: node tools/emit/nonstandard-dic.mjs <hyph_hy_AM.dic>   (appends in place)
  */
 
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { syllabifyWithSchwa } from "../../dist/index.js";
+import { syllabifyWithSchwa, EASTERN } from "../../dist/index.js";
 
 const SCHWA = "ը";
+const LIGATURE = "և";
+/** Max Liang level: beats every inhibiting pattern patgen may have learned at the gap. */
+const PRIORITY = 9;
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORDLIST = join(HERE, "../../corpus/wordlist.txt");
 
@@ -57,13 +66,12 @@ function schwaBreaks(word) {
 }
 
 /**
- * Build the non-standard .dic lines. Each rule is WHOLE-WORD anchored
- * (`.word.`) so it fires only on that exact word — local (substring) rules
- * interfere across words and cannot be made mutually exclusive without patgen,
- * which has no non-standard mode. Whole-word anchoring collides on a word with
- * two schwa breaks (same letter key), so we emit only single-schwa-break words;
- * multi-break words fall back to the runtime engine (safe under-hyphenation).
- * Priority 9 lets the schwa break beat standard inhibiting patterns.
+ * Schwa rules. Each rule is WHOLE-WORD anchored (`.word.`) so it fires only on
+ * that exact word — local (substring) rules interfere across words and cannot be
+ * made mutually exclusive without patgen, which has no non-standard mode.
+ * Whole-word anchoring collides on a word with two schwa breaks (same letter
+ * key), so only single-schwa-break words are emitted; multi-break words fall
+ * back to the runtime engine (safe under-hyphenation).
  */
 export function buildSchwaLines(words) {
   const lines = [];
@@ -74,23 +82,34 @@ export function buildSchwaLines(words) {
     const chars = [...word];
     const left = chars.slice(0, breakAt).join("");
     const right = chars.slice(breakAt).join("");
-    const pattern = `.${left}9${right}.`;
-    lines.push(`${pattern}/${ld}=,${start + 1},${lo.length}`);
+    lines.push(`.${left}${PRIORITY}${right}./${ld}=,${start + 1},${lo.length}`);
   }
   return lines.sort();
 }
 
+/**
+ * Ligature rules. և before a vowel is always /ev/ + vowel with the վ as the next
+ * syllable's onset (single consonant between vowels), so the break is ե-վ and
+ * the rule is safe as a LOCAL pattern: one line per vowel that can follow և
+ * (ու starts with ո). The engine's letter-preserving mode emits no break there
+ * at all, so these rules add the break rather than moving one.
+ */
+export function buildLigatureLines() {
+  return [...EASTERN.vowels].map((vowel) => `${LIGATURE}${PRIORITY}${vowel}/ե=վ,1,1`);
+}
+
 async function main() {
   const dicPath = process.argv[2];
-  if (!dicPath) throw new Error("usage: schwa-dic.mjs <hyph_hy_AM.dic>");
+  if (!dicPath) throw new Error("usage: nonstandard-dic.mjs <hyph_hy_AM.dic>");
 
   const words = (await readFile(WORDLIST, "utf8")).split("\n").filter(Boolean);
-  const lines = buildSchwaLines(words);
+  const schwa = buildSchwaLines(words);
+  const ligature = buildLigatureLines();
 
   const dic = await readFile(dicPath, "utf8");
   const trimmed = dic.endsWith("\n") ? dic : dic + "\n";
-  await writeFile(dicPath, trimmed + lines.join("\n") + "\n", "utf8");
-  console.log(`schwa non-standard rules appended: ${lines.length} -> ${dicPath}`);
+  await writeFile(dicPath, trimmed + [...ligature, ...schwa].join("\n") + "\n", "utf8");
+  console.log(`non-standard rules appended: ${ligature.length} ligature (և) + ${schwa.length} schwa -> ${dicPath}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

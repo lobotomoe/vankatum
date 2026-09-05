@@ -20,7 +20,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, "../../playground/corpus/arlis");
 const DOCIDS_FILE = process.argv[2] ?? join(HERE, "arlis-docids.txt");
 const POLITE_DELAY_MS = 1500;
-const ARMENIAN_WORD = /[Ա-Ֆա-ֆ]+/gu;
+const ARMENIAN_WORD = /[Ա-Ֆա-ֈ]+/gu;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
