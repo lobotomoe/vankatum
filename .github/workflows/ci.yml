@@ -1,8 +1,10 @@
 name: ci
 
-# Fast feedback on every change: typecheck, lint, tests, and build. Node-only —
-# the heavy pattern-generation pipeline (Python + pypatgen) runs in release.yml,
-# not here.
+# Fast feedback on every change: typecheck, lint, tests and build on every Node
+# line the test tooling supports, plus a packaging gate that checks the tarball
+# the way npm consumers see it (publint + arethetypeswrong) and smoke-tests it on
+# every Node line the package claims in `engines`. Node-only — the heavy
+# pattern-generation pipeline (Python + pypatgen) runs in release.yml, not here.
 on:
   push:
     branches: [main]
@@ -14,14 +16,63 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # publint: package.json / exports / files sanity. attw: the types resolve
+      # under every module-resolution mode an ESM-only package supports.
+      - run: npm run check:pack
+      - run: npm pack --pack-destination pack
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tarball
+          path: pack/*.tgz
+          if-no-files-found: error
+
+  smoke:
+    # The tarball, installed like a dependency, on every Node line in `engines`.
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: tarball
+          path: pack
+      - run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          cp scripts/smoke.mjs "$RUNNER_TEMP/smoke/"
+          cd "$RUNNER_TEMP/smoke"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "$GITHUB_WORKSPACE"/pack/*.tgz
+          node smoke.mjs
