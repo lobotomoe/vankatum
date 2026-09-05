@@ -18,7 +18,7 @@ const TARGET = Number(process.argv[3] ?? 600);
 const BATCH = 20; // exlimit cap for plaintext extracts
 const POLITE_DELAY_MS = 1500;
 const MAX_RETRIES = 5;
-const ARMENIAN_WORD = /[Ա-Ֆա-ֆ]+/gu;
+const ARMENIAN_WORD = /[Ա-Ֆա-ֈ]+/gu;
 const UA = "vankatum-corpus/1.0 (Armenian hyphenation research; https://github.com/)";
 
 const HERE = dirname(fileURLToPath(import.meta.url));

@@ -9,7 +9,7 @@ avoid losing track of them. Re-download everything with:
 ./scripts/fetch-references.sh
 ```
 
-Last verified: 2026-06-09.
+Last verified: 2026-09-05.
 
 ---
 
@@ -49,7 +49,7 @@ Additional **wordlist coverage** sources (different registers → better pattern
 
 | Source | Register | License | URL | Harvester |
 |---|---|---|---|---|
-| **Hunspell hy_AM (martakert/hyspell)** | Curated spell-check lexicon (~63k root words) — the single biggest vocabulary source | GPL/LGPL/MPL | `https://raw.githubusercontent.com/martakert/hyspell/master/hy_AM.dic` (first line = count; `root/AFFIXFLAGS`) | `tools/corpus/fetch-wordlists.mjs` |
+| **Hunspell hy_AM (martakert/hyspell)** | Curated spell-check lexicon (~65k root words) — the single biggest vocabulary source | GPL/LGPL/MPL | `https://raw.githubusercontent.com/martakert/hyspell/master/hy_AM.dic` (first line = count; `root/AFFIXFLAGS`) | `tools/corpus/fetch-wordlists.mjs` |
 | **Wikipedia (hy)** | Encyclopedic, all domains | CC BY-SA | `https://hy.wikipedia.org/w/api.php` (`generator=random&prop=extracts&explaintext`) | `tools/corpus/fetch-wiki.mjs` |
 | **Wikisource (hy)** | Literary / classical | CC BY-SA / PD | `https://hy.wikisource.org/w/api.php` (same API) | `tools/corpus/fetch-wiki.mjs` |
 | **FrequencyWords (hermitdave)** | Spoken/subtitle (OpenSubtitles) | CC-by-sa-4.0 | `https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hy/hy_full.txt` (`word count`) | `tools/corpus/fetch-wordlists.mjs` |
@@ -57,7 +57,18 @@ Additional **wordlist coverage** sources (different registers → better pattern
 Benchmark harness: `playground/harness/benchmark.mjs`. Compared with
 `leftmin=1/rightmin=1`, case-insensitive, `և↔եվ`-normalised, multi-variant =
 match-any; rejects corrupt entries where the de-hyphenated form ≠ the word.
-Current result: vankatum **96.5%** on the implemented scope (excl. ~415 schwa words).
+Current result (2026-09-05): vankatum **96.5%** (1,727 / 1,789) on the
+letter-preserving scope, excluding the 415 schwa words. The 62 residual
+mismatches are 37 morphological divisions (surname / adjective suffixes
+`-յան`, `-յա`, `-յալ`; `Բելուջ-ստան`), 19 `ևV` words where the gold writes
+the `ե-վ` split the pure mode cannot express, and 6 loanwords in `-իա` the gold
+keeps as one syllable. The schwa harness `playground/harness/schwa-validate.mjs`
+scores the orthographic mode at **87.3%** (365 / 418) exact.
+
+The same gold settled two rule questions empirically (see SPEC.md): every `և`
+before a vowel is divided `ե-վ` (24 : 0), and no word-final `Cք` cluster ever
+takes a schwa (0 : 84), while `Cյ` before a vowel stays together in the majority
+(147 : 35, the splits being the morphological suffixes above).
 
 ### Candidates — not yet used (future coverage / differential mining / morphology)
 
@@ -109,31 +120,38 @@ corpus and publishes the agreement %; residual mismatches go into the TeX
 authoritative reference for anyone who can run it.
 
 **Generalisation is held-out, not just on-corpus.** `tools/emit/verify.mjs`
-measures exact reproduction on the full training corpus (100%, by construction).
+measures exact reproduction on the full training corpus (100%, by construction:
+46,749 patterns + 2,066 exceptions over 87,452 words / 209,887 break points).
 To measure *unseen* words, `tools/emit/holdout.mjs` splits the corpus by content
-hash into train (~90%) and a held-out ~10% (8,341 words / 19,783 break points),
+hash into train (~90%) and a held-out ~10% (8,687 words / 20,663 break points),
 trains patterns on the train split only, then applies them to the held-out words:
-**98.45% recall, 99.63% precision, 95.6% of words broken exactly right**. Held-out
-words are absent from the training dictionary, so patgen exceptions cannot
-memorise them — this is pure pattern generalisation, reproducible with
-`node tools/emit/holdout.mjs`.
+**98.47% recall, 99.64% precision, 95.6% of words broken exactly right**
+(2026-09-05). Held-out words are absent from the training dictionary, so patgen
+exceptions cannot memorise them — this is pure pattern generalisation,
+reproducible with `node tools/emit/holdout.mjs`.
 
-**Schwa (ը) hyphenation — `.dic` only.** Liang patterns are letter-preserving,
-so the epenthetic ը that Armenian writes at a break inside a vowelless cluster
-(`գրել → գը-րել`, `սկսել → սըկ-սել`) can only be expressed by libhyphen's
-**non-standard hyphenation** (character-changing breaks). `tools/emit/schwa-dic.mjs`
-appends these to `hyph_hy_AM.dic` (verified in real libhyphen via pyphen). Rules
-are **whole-word anchored** (`.word.`) at priority 9 — local/substring rules
-interfere across words and can't be made mutually exclusive without patgen (which
-has no non-standard mode); whole-word anchoring collides on a word with two schwa
-breaks, so only single-schwa-break words are emitted. Result over the 84k corpus:
-**0 spurious ը on 64,696 non-schwa words; 100% of 18,155 single-break schwa words
-covered; 1,354 multi-break words (6.9%) defer to the runtime engine** (safe
-under-hyphenation). Schwa correctness is bounded by the engine's schwa syllabifier
-(~86.6% vs gold). `.tex` / `.json` / `.hyb` carry no schwa.
+**Character-changing breaks — `.dic` only.** Liang patterns are letter-preserving,
+so two Armenian breaks can only be expressed by libhyphen's **non-standard
+hyphenation**: the epenthetic ը written at a break inside a vowelless cluster
+(`գրել → գը-րել`, `սկիզբ → ըս-կիզբ`) and the ligature `և` spelled out before a
+vowel (`Երևան → Ե-րե-վան`). `tools/emit/nonstandard-dic.mjs` appends both to
+`hyph_hy_AM.dic` (verified against libhyphen semantics via pyphen, whose
+implementation mirrors `hnj_hyphen_hyphenate2`). Schwa rules are **whole-word
+anchored** (`.word.`) at priority 9 — local/substring rules interfere across words
+and can't be made mutually exclusive without patgen (which has no non-standard
+mode); whole-word anchoring collides on a word with two schwa breaks, so only
+single-schwa-break words are emitted. Result over the 87k corpus (2026-09-05):
+**0 spurious ը on 65,767 non-schwa words; 100% of 18,685 single-break schwa words
+covered; 3,000 words (13.8% of schwa words — several breaks, or a schwa only in
+the last syllable) defer to the runtime engine** (safe under-hyphenation). Schwa
+correctness is bounded by the engine's schwa syllabifier (87.3% vs gold). The
+ligature rules are seven **local** patterns `և9V/ե=վ,1,1` (one per vowel): `ևV`
+is always /ev/ + vowel with the վ as the next onset, so the rule cannot misfire.
+`.tex` / `.json` / `.hyb` carry neither break (the engine labels no break at
+`ևV`, so patgen learns to inhibit it there).
 
 **.hyb is best-effort.** Chromium's Minikin trie packs each node into a 32-bit
-word, so it cannot hold a pattern set as diverse as the one our ~84k-word corpus
+word, so it cannot hold a pattern set as diverse as the one our ~87k-word corpus
 produces (even ~7.5k patterns overflow it — the limit is distinct-pattern
 diversity, not raw count). The release therefore skips `.hyb` and instead always
 ships the **Minikin trio** (`hyph-hy.pat.txt` / `.chr.txt` / `.hyp.txt`) so a
@@ -149,6 +167,7 @@ fits their build. The trio + `mk_hyb_file.py` are vendored under `tools/emit/`.
 | `typescript` (strict) | Core language. |
 | `vitest` | Test runner. |
 | `fast-check` | Property-based / invariant fuzzing. |
+| `publint`, `@arethetypeswrong/cli` | Packaging gate on the packed tarball (exports / files / type resolution), run in CI and before publish. |
 
 ---
 
@@ -164,7 +183,11 @@ fits their build. The trio + `mk_hyb_file.py` are vendored under `tools/emit/`.
 - **`mk_hyb_file.py`** (AOSP Minikin) is vendored at `tools/emit/vendor/` under
   **Apache-2.0** (license header preserved) — it converts our generated patterns
   to the Chromium `.hyb` binary; it is a build tool, not shipped in the package.
-- **`corpus/wordlist.txt`** (committed) holds only bare lowercase words (ARLIS +
-  Wiktionary headwords) — facts, no hyphenations or act text — so it is safe to
+- **`corpus/wordlist.txt`** (committed) holds only bare lowercase words from the
+  six sources above — facts, no hyphenations or act text — so it is safe to
   commit and is the reproducible input for CI pattern builds. Generated artifacts
-  (`artifacts/`) are gitignored release outputs.
+  (`artifacts/`) are gitignored release outputs. The letter class used by every
+  harvester and by the labeller is `[ա-ֈ]` (U+0561–U+0588): the 2026-06 snapshot
+  used `[ա-ֆ]`, which stops one codepoint short of the ligature `և` (U+0587) and
+  silently dropped or split every `և` word (0 of 84k), so no pattern ever learned
+  a `և` context. Fixed and re-harvested 2026-09-05: 1,702 `և` words of 87,452.

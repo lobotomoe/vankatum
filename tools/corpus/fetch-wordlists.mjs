@@ -16,7 +16,7 @@ import { dirname, join } from "node:path";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORPUS = join(HERE, "../../playground/corpus");
-const VALID = /^[ա-ֆ]{2,}$/u;
+const VALID = /^[ա-ֈ]{2,}$/u;
 
 const SOURCES = [
   {

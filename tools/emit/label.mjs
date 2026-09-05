@@ -23,7 +23,7 @@ const WORDLIST = join(ROOT, "corpus/wordlist.txt");
 const OUT = join(ROOT, "playground/corpus/dictionary.txt");
 
 // Lowercase Armenian word, at least two letters (shorter words never break).
-const VALID = /^[ա-ֆ]{2,}$/u;
+const VALID = /^[ա-ֈ]{2,}$/u;
 
 const LABEL_OPTS = { leftmin: 1, rightmin: 1 };
 
