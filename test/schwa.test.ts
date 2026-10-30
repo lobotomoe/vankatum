@@ -16,6 +16,14 @@ describe("schwa epenthesis (Dolatian 2023 right-to-left syllabification)", () =>
     ["զբոսանք", "ըզ-բո-սանք"],
     // sibilant + sonorant is NOT flipped
     ["սրահ", "սը-րահ"],
+    // capitalised = proper name: the cluster stays whole, no ը (RA order N 22-Ն)
+    ["Ստեփան", "Ստե-փան"],
+    ["Սպիտակ", "Սպի-տակ"],
+    ["Շտապել", "Շտա-պել"],
+    ["ՍՏԱՆԱԼ", "ՍՏԱ-ՆԱԼ"],
+    // an all-caps word takes a capital schwa
+    ["ԳՐԵԼ", "ԳԸ-ՐԵԼ"],
+    ["Գրել", "Գը-րել"],
   ];
   for (const [word, expected] of cases) {
     it(`${word} -> ${expected}`, () => { expect(s(word)).toBe(expected); });
