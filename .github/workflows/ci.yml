@@ -3,8 +3,8 @@ name: ci
 # Fast feedback on every change: typecheck, lint, tests and build on every Node
 # line the test tooling supports, plus a packaging gate that checks the tarball
 # the way npm consumers see it (publint + arethetypeswrong) and smoke-tests it on
-# every Node line the package claims in `engines`. Node-only — the heavy
-# pattern-generation pipeline (Python + pypatgen) runs in release.yml, not here.
+# every Node line the package claims in `engines`. The `artifacts` job runs the
+# pattern pipeline and its end-to-end gate; release.yml attaches its output.
 on:
   push:
     branches: [main]
@@ -77,3 +77,22 @@ jobs:
           npm init -y >/dev/null
           npm install --no-audit --no-fund "$GITHUB_WORKSPACE"/pack/*.tgz
           node smoke.mjs
+
+  artifacts:
+    # The pattern pipeline end to end: an engine change that the generated
+    # artifacts no longer reproduce in real libhyphen / LuaTeX / hypher fails here,
+    # not at release time.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: pip install pypatgen
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends texlive-luatex
+      - run: PYPATGEN=pypatgen ./tools/emit/build-patterns.sh

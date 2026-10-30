@@ -10,30 +10,23 @@
  *     boundary lies between its ե and վ, so the ligature is spelled out.
  *
  * libhyphen's NON-STANDARD hyphenation can (it changes characters at the break),
- * so this emitter appends both rule sets to hyph_hy_AM.dic only. Format (see
+ * so these rule sets go into hyph_hy_AM.dic only (assembled by ./build.mjs). Format (see
  * SOURCES.md §F):
  *
  *     <pattern>/<replacement>,<start>,<cut>
  *
  * where the odd digit in <pattern> marks the break, <replacement> is the text
  * shown instead of the <cut> letters starting at 1-based letter <start> of the
- * pattern, with "=" at the line break. Verified against libhyphen semantics via
- * pyphen (which implements the same rules).
- *
- * Usage: node tools/emit/nonstandard-dic.mjs <hyph_hy_AM.dic>   (appends in place)
+ * pattern, with "=" at the line break. Verified end to end against the real
+ * libhyphen by tools/emit/e2e/.
  */
 
-import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { syllabifyWithSchwa, EASTERN } from "../../dist/index.js";
+import { syllabifyWithSchwa, EASTERN } from "../../../dist/index.js";
 
 const SCHWA = "ը";
 const LIGATURE = "և";
 /** Max Liang level: beats every inhibiting pattern patgen may have learned at the gap. */
 const PRIORITY = 9;
-const HERE = dirname(fileURLToPath(import.meta.url));
-const WORDLIST = join(HERE, "../../corpus/wordlist.txt");
 
 /**
  * The epenthetic-schwa breaks of a word: for each syllable boundary whose LEFT
@@ -96,25 +89,4 @@ export function buildSchwaLines(words) {
  */
 export function buildLigatureLines() {
   return [...EASTERN.vowels].map((vowel) => `${LIGATURE}${PRIORITY}${vowel}/ե=վ,1,1`);
-}
-
-async function main() {
-  const dicPath = process.argv[2];
-  if (!dicPath) throw new Error("usage: nonstandard-dic.mjs <hyph_hy_AM.dic>");
-
-  const words = (await readFile(WORDLIST, "utf8")).split("\n").filter(Boolean);
-  const schwa = buildSchwaLines(words);
-  const ligature = buildLigatureLines();
-
-  const dic = await readFile(dicPath, "utf8");
-  const trimmed = dic.endsWith("\n") ? dic : dic + "\n";
-  await writeFile(dicPath, trimmed + [...ligature, ...schwa].join("\n") + "\n", "utf8");
-  console.log(`non-standard rules appended: ${ligature.length} ligature (և) + ${schwa.length} schwa -> ${dicPath}`);
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((err) => {
-    console.error(err.message);
-    process.exit(1);
-  });
 }

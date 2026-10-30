@@ -12,9 +12,9 @@
 
 import { readFile } from "node:fs/promises";
 import { compile, breakOffsets } from "./liang.mjs";
-import { parseTex, offsetsFromMarked } from "./tex.mjs";
+import { parseTex, offsetsFromMarked, RENDER_MINIMA } from "./tex.mjs";
 
-const APPLY_OPTS = { leftmin: 1, rightmin: 1 };
+const { leftmin, rightmin } = RENDER_MINIMA;
 
 async function main() {
   const [texPath, dictPath] = process.argv.slice(2);
@@ -39,8 +39,13 @@ async function main() {
     if (!marked) continue;
     const word = marked.replaceAll("-", "");
     words++;
-    const engine = new Set(offsetsFromMarked(marked));
-    const predicted = new Set(exceptions.get(word) ?? breakOffsets(word, patterns, APPLY_OPTS));
+    // Compared under the render minima: the corpus is labelled at every syllable
+    // boundary, but no consumer ever breaks inside the minima.
+    const length = [...word].length;
+    const engine = new Set(
+      offsetsFromMarked(marked).filter((b) => b >= leftmin && length - b >= rightmin),
+    );
+    const predicted = new Set(exceptions.get(word) ?? breakOffsets(word, patterns, RENDER_MINIMA));
 
     engineTotal += engine.size;
     let wordOk = true;

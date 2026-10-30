@@ -27,12 +27,16 @@ jobs:
 
       - run: npm ci
       - run: pip install pypatgen
+      # LuaTeX for the end-to-end gate (tools/emit/e2e/run.sh); perl, cc and git
+      # are on the runner image.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends texlive-luatex
 
       - name: Test engine
         run: npm test
 
       # Builds artifacts/{hyph-hy.tex, hyph_hy_AM.dic, hyphenation.hy.json, hyph-hy.hyb}
-      # from the committed corpus wordlist. PYPATGEN points at the pip-installed CLI.
+      # from the committed corpus wordlist and fails unless real libhyphen, LuaTeX
+      # and hypher reproduce the engine on it. PYPATGEN points at the pip-installed CLI.
       - name: Build hyphenation artifacts
         run: PYPATGEN=pypatgen ./tools/emit/build-patterns.sh
 

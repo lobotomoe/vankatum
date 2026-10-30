@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compile, breakOffsets } from "../tools/emit/liang.mjs";
-import { parseTex, offsetsFromMarked } from "../tools/emit/tex.mjs";
+import { applyMinima, parseTex, offsetsFromMarked } from "../tools/emit/tex.mjs";
+import { exceptionPattern, mergeByKey } from "../tools/emit/dic/merge.mjs";
 
 // The emit tooling is the pattern-generation path: liang.mjs is the Liang applier
 // every downstream consumer (TeX/hypher/libhyphen/Minikin) effectively runs, and
@@ -57,5 +58,37 @@ describe("tex parser", () => {
   it("reads codepoint offsets from a hyphen-marked word", () => {
     expect(offsetsFromMarked("ա-շա-կերտ")).toEqual([1, 3]);
     expect(offsetsFromMarked("մարդ")).toEqual([]);
+  });
+});
+
+describe("exception minima", () => {
+  it("drops breaks that leave fewer than rightmin letters on the new line", () => {
+    expect(applyMinima("ա-լե-լու-ի-ա")).toBe("ա-լե-լու-իա");
+  });
+
+  it("keeps a single letter before the break (leftmin 1)", () => {
+    expect(applyMinima("ա-շա-կերտ")).toBe("ա-շա-կերտ");
+  });
+});
+
+describe("libhyphen .dic rules", () => {
+  it("turns an exception into a whole-word pattern forcing exactly its breaks", () => {
+    expect(exceptionPattern("աբ-բա")).toBe(".ա8բ9բ8ա.");
+  });
+
+  it("merges rules with the same letters, keeping the replacement", () => {
+    // libhyphen keeps only the last line per key, so the merge must happen first.
+    expect(mergeByKey(["ևա1", "և9ա/ե=վ,1,1"])).toEqual(["և9ա1/ե=վ,1,1"]);
+  });
+
+  it("lists non-standard rules first, shortest first, then standard patterns", () => {
+    // substrings.pl carries a replacement into a containing rule only if the
+    // contained rule was processed earlier.
+    const merged = mergeByKey(["ա1բ", ".ա9րևե./ըր=,1,1", "և9ե/ե=վ,1,1"]);
+    expect(merged).toEqual(["և9ե/ե=վ,1,1", ".ա9րևե./ըր=,1,1", "ա1բ"]);
+  });
+
+  it("refuses two different replacements for the same letters", () => {
+    expect(() => mergeByKey(["և9ա/ե=վ,1,1", "և9ա/x=,1,1"])).toThrow(/conflicting replacements/);
   });
 });

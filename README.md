@@ -101,15 +101,16 @@ patterns are the keystone; the others derive from them.
 | File | Tool | How to use |
 |---|---|---|
 | `hyph-hy.tex` | TeX / LuaTeX / XeTeX / ConTeXt | Load the `\patterns{}` + `\hyphenation{}` via your language setup (e.g. register with `hyph-utf8` / `babel` / `polyglossia`). |
-| `hyph_hy_AM.dic` | **Adobe InDesign**, LibreOffice, OpenOffice, Scribus, Firefox | A libhyphen/Hunspell dictionary. Drop it into the app's hyphenation-dictionary location for `hy`. InDesign: place under the Hunspell `Dictionaries/hy` folder and register it in `Info.plist`, then restart ([Adobe guide](https://helpx.adobe.com/indesign/kb/add_cs_dictionaries.html)). |
+| `hyph_hy_AM.dic` | **Adobe InDesign**, LibreOffice, OpenOffice, Scribus | A libhyphen/Hunspell dictionary. Drop it into the app's hyphenation-dictionary location for `hy`. InDesign: place under the Hunspell `Dictionaries/hy` folder and register it in `Info.plist`, then restart ([Adobe guide](https://helpx.adobe.com/indesign/kb/add_cs_dictionaries.html)). |
 | `hyphenation.hy.json` | hypher and the JS ecosystem | `new Hypher(patterns)` — see below. |
 | `hyph-hy.{pat,chr,hyp}.txt` | Chromium / Android (Minikin) | The `.hyb` input trio. Build with `mk_hyb_file.py hyph-hy.pat.txt hyph-hy.hyb`. |
 
 The `.dic` is the only artifact that carries the two **character-changing**
 breaks — the epenthetic schwa (`գրել -> գը-րել`) and the `և` ligature spelled out
 before a vowel (`Երևան -> Ե-րե-վան`) — because only libhyphen's non-standard
-hyphenation can express them. Both rule sets are verified to load and hyphenate
-in real libhyphen semantics (via pyphen).
+hyphenation can express them. Every build runs the `.dic` through the real
+libhyphen (as LibreOffice calls it), the `.tex` through LuaTeX and the `.json`
+through hypher, and fails unless each reproduces the engine on the whole corpus.
 
 ### hypher (web)
 

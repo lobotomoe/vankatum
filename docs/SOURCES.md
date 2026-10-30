@@ -108,7 +108,7 @@ by existing, battle-tested converters. The engine labels a corpus wordlist →
 | Target | Format / file | Consumed by | How it's produced | Reference |
 |---|---|---|---|---|
 | **TeX / LaTeX** | `hyph-hy.tex` (`\patterns{…}` + `\hyphenation{…}` exceptions) | TeX, LuaTeX, XeTeX, ConTeXt; upstream of all others | `patgen` / `pypatgen` over engine-labelled wordlist | `https://ctan.org/pkg/patgen` · `https://github.com/pgmmpk/pypatgen` |
-| **Hunspell / libhyphen** | `hyph_hy_AM.dic` (first line = `UTF-8`, then patterns) | **Adobe InDesign** (Hunspell dict provider), LibreOffice, OpenOffice, Scribus, Firefox | derive from TeX patterns (hyph-utf8 `substrings` route) | `https://github.com/hunspell/hyphen` · `https://helpx.adobe.com/indesign/kb/add_cs_dictionaries.html` |
+| **Hunspell / libhyphen** | `hyph_hy_AM.dic` (first line = `UTF-8`, then patterns) | **Adobe InDesign** (Hunspell dict provider), LibreOffice, OpenOffice, Scribus | TeX patterns + exceptions as whole-word patterns + non-standard rules, run through upstream `substrings.pl` (`tools/emit/dic/build.mjs`) | `https://github.com/hunspell/hyphen` · `https://helpx.adobe.com/indesign/kb/add_cs_dictionaries.html` |
 | **Chromium / Minikin** | `hyph-hy.hyb` (packed trie binary; alphabet + suffix-compressed trie) | Chrome, Edge, Chromium, Android | `mk_hyb_file.py` (AOSP Minikin, Apache-2.0, vendorable) over TeX patterns | `https://android.googlesource.com/platform/frameworks/minikin/+/master/doc/hyb_file_format.md` · `https://chromium.googlesource.com/chromium/src/+/main/third_party/hyphenation-patterns/build-hyb.sh` |
 | **JS web ecosystem** | `hyphenation.hy.json` (`{id, leftmin, rightmin, patterns, exceptions}`) | hypher, Hyphenator.js, retext, 11ty, Prince-style toolchains | transform TeX patterns → hypher trie object | `https://github.com/bramstein/hypher` |
 | **Runtime (no file)** | `hyphenateText()` soft-hyphen — already shipped in the TS package | any JS/web app directly | the engine itself | `src/text.ts` |
@@ -118,6 +118,18 @@ the engine. The pipeline diffs emitted-pattern output against the engine over th
 corpus and publishes the agreement %; residual mismatches go into the TeX
 `\hyphenation{}` exception list for exact reproduction. The TS engine remains the
 authoritative reference for anyone who can run it.
+
+**End to end, in the real consumers.** A format can be valid for our own Liang
+applier and still be read differently by the program that consumes it, so the
+last build step (`tools/emit/e2e/run.sh`, also a CI job) runs every corpus word
+through the real thing: the C libhyphen at a pinned commit, called the way
+LibreOffice calls it (`hnj_hyphen_hyphenate3`); LuaTeX's own `lang.hyphenate`
+over `hyph-hy.tex`; and hypher over the `.json`. Each must reproduce the engine
+on 100% of the corpus, non-standard breaks included, or the build fails. This
+gate exists because the 0.2.1 artifacts passed every in-house check while real
+libhyphen reproduced 70% of words (no `substrings.pl` step, `և` rules overridden)
+and hypher ignored the boundary patterns and all exceptions (`.` instead of `_`,
+wrong exception syntax).
 
 **Generalisation is held-out, not just on-corpus.** `tools/emit/verify.mjs`
 measures exact reproduction on the full training corpus (100%, by construction:
@@ -134,9 +146,14 @@ reproducible with `node tools/emit/holdout.mjs`.
 so two Armenian breaks can only be expressed by libhyphen's **non-standard
 hyphenation**: the epenthetic ը written at a break inside a vowelless cluster
 (`գրել → գը-րել`, `սկիզբ → ըս-կիզբ`) and the ligature `և` spelled out before a
-vowel (`Երևան → Ե-րե-վան`). `tools/emit/nonstandard-dic.mjs` appends both to
-`hyph_hy_AM.dic` (verified against libhyphen semantics via pyphen, whose
-implementation mirrors `hnj_hyphen_hyphenate2`). Schwa rules are **whole-word
+vowel (`Երևան → Ե-րե-վան`). `tools/emit/dic/nonstandard.mjs` builds both rule
+sets and `tools/emit/dic/build.mjs` assembles them into `hyph_hy_AM.dic`. Two
+libhyphen properties shape the assembly: at each letter it applies only the
+pattern of the one automaton state it reached (hence `substrings.pl`, which folds
+every embedded pattern into its container), and `substrings.pl` carries a rule's
+replacement into a containing pattern only if the rule came first in its input
+(hence non-standard rules first, shortest first). pyphen implements these
+semantics differently and is not a valid stand-in. Schwa rules are **whole-word
 anchored** (`.word.`) at priority 9 — local/substring rules interfere across words
 and can't be made mutually exclusive without patgen (which has no non-standard
 mode); whole-word anchoring collides on a word with two schwa breaks, so only
