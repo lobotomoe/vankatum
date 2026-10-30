@@ -12,14 +12,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { armenianWords } from "./words.mjs";
 
 const HOST = process.argv[2] ?? "hy.wikipedia.org";
 const TARGET = Number(process.argv[3] ?? 600);
 const BATCH = 20; // exlimit cap for plaintext extracts
 const POLITE_DELAY_MS = 1500;
 const MAX_RETRIES = 5;
-const ARMENIAN_WORD = /[Ա-Ֆա-ֈ]+/gu;
-const UA = "vankatum-corpus/1.0 (Armenian hyphenation research; https://github.com/)";
+const UA = "vankatum-corpus/1.0 (Armenian hyphenation research; https://github.com/lobotomoe/vankatum)";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NAME = HOST.split(".")[1] ?? HOST.replaceAll(".", "_");
@@ -61,9 +61,7 @@ async function main() {
     try {
       const pages = await randomBatch();
       for (const page of pages) {
-        for (const w of (page.extract ?? "").match(ARMENIAN_WORD) ?? []) {
-          vocab.add(w.toLowerCase());
-        }
+        for (const w of armenianWords(page.extract ?? "")) vocab.add(w);
       }
       process.stdout.write(`\r  ${HOST}: batch ${i + 1}/${requests}, vocab ${vocab.size}   `);
     } catch (err) {

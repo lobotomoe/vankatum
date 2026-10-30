@@ -15,12 +15,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { armenianWords } from "./words.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, "../../playground/corpus/arlis");
 const DOCIDS_FILE = process.argv[2] ?? join(HERE, "arlis-docids.txt");
 const POLITE_DELAY_MS = 1500;
-const ARMENIAN_WORD = /[Ա-Ֆա-ֈ]+/gu;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -48,7 +48,7 @@ function extractActBody(html) {
 
 function wordsFromHtml(bodyHtml) {
   const text = bodyHtml.replace(/<[^>]+>/g, " ");
-  return (text.match(ARMENIAN_WORD) ?? []).map((w) => w.toLowerCase());
+  return armenianWords(text);
 }
 
 async function fetchAct(docid) {
