@@ -3,8 +3,8 @@
 [![npm](https://img.shields.io/npm/v/vankatum.svg)](https://www.npmjs.com/package/vankatum)
 [![license](https://img.shields.io/npm/l/vankatum.svg)](LICENSE)
 
-Armenian hyphenation that gets consonant clusters right, for websites, LibreOffice
-and LaTeX.
+Armenian hyphenation that gets consonant clusters right, for websites, LibreOffice,
+InDesign and LaTeX.
 
 | Word                 | Existing patterns (via hypher) | vankatum       |
 | -------------------- | ------------------------------ | -------------- |
@@ -24,13 +24,13 @@ program it is meant for.
 
 ## Pick your tool
 
-| You use                            | What to get                                                                                         | Status                                                                   |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| A website or web app               | the npm package, or `hyphenation.hy.json` for hypher                                                | tested in Chromium, Firefox, WebKit on macOS                             |
-| LibreOffice Writer                 | [`vankatum-hy.oxt`](https://github.com/lobotomoe/vankatum/releases/latest/download/vankatum-hy.oxt) | tested in LibreOffice 26.8                                               |
-| LaTeX (LuaLaTeX)                   | [`hyph-hy.tex`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph-hy.tex)         | tested with babel                                                        |
-| Adobe InDesign                     | nothing yet                                                                                         | see [below](#adobe-indesign): the documented method breaks InDesign 2026 |
-| Microsoft Word, Pages, Google Docs | nothing yet                                                                                         | these apps do not accept a custom hyphenation dictionary                 |
+| You use                            | What to get                                                                                         | Status                                                   |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| A website or web app               | the npm package, or `hyphenation.hy.json` for hypher                                                | tested in Chromium, Firefox, WebKit on macOS             |
+| LibreOffice Writer                 | [`vankatum-hy.oxt`](https://github.com/lobotomoe/vankatum/releases/latest/download/vankatum-hy.oxt) | tested in LibreOffice 26.8                               |
+| LaTeX (LuaLaTeX)                   | [`hyph-hy.tex`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph-hy.tex)         | tested with babel                                        |
+| Adobe InDesign (macOS)             | the install script, see [below](#adobe-indesign-macos)                                              | tested in InDesign 2026                                  |
+| Microsoft Word, Pages, Google Docs | nothing yet                                                                                         | these apps do not accept a custom hyphenation dictionary |
 
 All files are attached to every [release](https://github.com/lobotomoe/vankatum/releases/latest).
 
@@ -104,14 +104,32 @@ not pick up the old `hyph-hy.tex` from your TeX distribution), then:
 the break. XeLaTeX and pdfLaTeX load patterns only when the format is built, so
 the recipe above does not apply to them.
 
-### Adobe InDesign
+### Adobe InDesign (macOS)
 
-Not supported yet. **Do not add Armenian to InDesign by editing the Hunspell
-plugin's `Info.plist`** (the method in Adobe's own guide, and in vankatum 0.2.3):
-the file is part of the plugin's code signature, and in InDesign 2026 the edit
-stops hyphenation in every Hunspell language, English included. If you ran the
-0.2.3 script, undo it with `sudo bash macos.sh --uninstall` (the same script),
-which restores the original file.
+InDesign ships no Armenian hyphenation, but its Hunspell plugin can take a new
+language. Tested in InDesign 2026 (21.6) on an Apple Silicon Mac.
+
+1. Quit InDesign.
+2. In Terminal:
+   ```sh
+   curl -fsSLO https://raw.githubusercontent.com/lobotomoe/vankatum/main/install/indesign/macos.sh
+   sudo bash macos.sh
+   ```
+3. Start InDesign and set Character > Language to **Armenian (Armenia)**.
+
+Both kinds of break work, including the written `ը` (`դասագըր-քային`).
+
+What the script changes: adding a language means editing a file inside Adobe's
+Hunspell plugin, and that file is covered by Adobe's code signature. With the
+signature broken, InDesign 2026 stops hyphenating every Hunspell language,
+English included. (That is what Adobe's own guide and vankatum 0.2.3 lead to.)
+So the script first copies Adobe's plugin to
+`/Library/Application Support/vankatum/`, then edits the plugin and signs it
+again with a local signature. InDesign accepts plugins not signed by Adobe.
+
+`sudo bash macos.sh --uninstall` puts Adobe's untouched plugin back, signature
+included. It also undoes an install made by vankatum 0.2.3. An InDesign update
+replaces the plugin, which removes Armenian; run the script again after one.
 
 ### Other programs
 
