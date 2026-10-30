@@ -177,7 +177,11 @@ learns to inhibit it).
 **Checked in LibreOffice itself.** Besides the libhyphen gate, the `.oxt` was
 installed into Writer 26.8.2 and 1,658 corpus words were rendered to PDF in
 columns of three widths: 3,626 line breaks, none outside the breaks the `.dic`
-allows (2026-10-31). This check is manual; it is not part of CI.
+allows (2026-10-31). In InDesign 2026 (21.6, Hunspell plugin re-signed by
+`install/indesign/macos.sh`) the same words were laid out through ExtendScript
+at two column widths: 1,118 line breaks, all where the `.dic` allows, and the
+schwa breaks drawn with their `ը` (`դասագըր-քային`). These checks are manual;
+they are not part of CI.
 
 **.hyb is best-effort.** Chromium's Minikin trie packs each node into a 32-bit
 word, so it cannot hold a pattern set as diverse as the one our ~87k-word corpus
