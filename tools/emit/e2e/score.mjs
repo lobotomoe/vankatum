@@ -4,8 +4,8 @@
  * Each output file holds one line per word: the word with "-" after a standard
  * break and "[replacement]" after a non-standard one. The expectation is the
  * engine under the render minima; the libhyphen .dic additionally promises its
- * non-standard breaks (the written schwa of single-schwa words, և -> ե=վ before
- * a vowel), which replace whatever plain break the engine has at that point.
+ * non-standard break (the written schwa of single-schwa words), which replaces
+ * whatever plain break the engine has at that point.
  *
  * Exits 1 unless every word of every consumer matches exactly.
  *
@@ -14,12 +14,10 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { breakPoints, EASTERN } from "../../../dist/index.js";
+import { breakPoints } from "../../../dist/index.js";
 import { RENDER_MINIMA } from "../tex.mjs";
 import { buildSchwaLines } from "../dic/nonstandard.mjs";
 
-const LIGATURE = "և";
-const LIGATURE_REPLACEMENT = "ե=վ";
 const SHOWN_MISMATCHES = 10;
 
 /** Break offset -> replacement (null for a plain break), from a consumer line. */
@@ -60,15 +58,6 @@ function expected(word, kind) {
   const inMinima = (b) => b >= RENDER_MINIMA.leftmin && chars.length - b >= RENDER_MINIMA.rightmin;
   const schwa = schwaBreak(word);
   if (schwa !== undefined && inMinima(schwa.at)) breaks.set(schwa.at, schwa.replacement);
-  // The split writes վ at the start of the next line, one letter more than the
-  // letters after the break (առջե-վի is two letters on the new line).
-  const ligatureInMinima = (b) => b >= RENDER_MINIMA.leftmin && chars.length - b + 1 >= RENDER_MINIMA.rightmin;
-  chars.forEach((ch, k) => {
-    const next = chars[k + 1];
-    if (ch === LIGATURE && next !== undefined && EASTERN.vowels.has(next) && ligatureInMinima(k + 1)) {
-      breaks.set(k + 1, LIGATURE_REPLACEMENT);
-    }
-  });
   return breaks;
 }
 

@@ -78,17 +78,17 @@ describe("libhyphen .dic rules", () => {
 
   it("merges rules with the same letters, keeping the replacement", () => {
     // libhyphen keeps only the last line per key, so the merge must happen first.
-    expect(mergeByKey(["ևա1", "և9ա/ե=վ,1,1"])).toEqual(["և9ա1/ե=վ,1,1"]);
+    expect(mergeByKey(["ևա1", "և9ա8/ե=վա,1,2"])).toEqual(["և9ա8/ե=վա,1,2"]);
   });
 
   it("lists non-standard rules first, shortest first, then standard patterns", () => {
     // substrings.pl carries a replacement into a containing rule only if the
     // contained rule was processed earlier.
-    const merged = mergeByKey(["ա1բ", ".ա9րևե./ըր=,1,1", "և9ե/ե=վ,1,1"]);
-    expect(merged).toEqual(["և9ե/ե=վ,1,1", ".ա9րևե./ըր=,1,1", "ա1բ"]);
+    const merged = mergeByKey(["ա1բ", ".ա9րևե./ըր=,1,1", "և9ե8/ե=վե,1,2"]);
+    expect(merged).toEqual(["և9ե8/ե=վե,1,2", ".ա9րևե./ըր=,1,1", "ա1բ"]);
   });
 
   it("refuses two different replacements for the same letters", () => {
-    expect(() => mergeByKey(["և9ա/ե=վ,1,1", "և9ա/x=,1,1"])).toThrow(/conflicting replacements/);
+    expect(() => mergeByKey(["և9ա8/ե=վա,1,2", "և9ա/x=,1,1"])).toThrow(/conflicting replacements/);
   });
 });

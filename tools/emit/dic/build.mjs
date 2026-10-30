@@ -9,7 +9,7 @@
  * libhyphen has no \hyphenation either, so exceptions become whole-word patterns.
  *
  *   1. TeX patterns + exceptions (as whole-word patterns) + non-standard rules
- *      (./nonstandard.mjs: the written schwa, the և -> ե-վ split).
+ *      (./nonstandard.mjs: the written schwa).
  *   2. Patterns with the same letters are merged into one (digit-wise maximum),
  *      keeping the replacement of a non-standard rule; libhyphen would otherwise
  *      keep only the last line with that key.
@@ -28,7 +28,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseTex, RENDER_MINIMA } from "../tex.mjs";
 import { exceptionPattern, mergeByKey } from "./merge.mjs";
-import { buildLigatureLines, buildSchwaLines } from "./nonstandard.mjs";
+import { assertChangeBeforeBreak, buildSchwaLines } from "./nonstandard.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORDLIST = join(HERE, "../../../corpus/wordlist.txt");
@@ -41,9 +41,9 @@ async function main() {
   if (patterns.length === 0) throw new Error(`no patterns in ${texPath}`);
   const words = (await readFile(WORDLIST, "utf8")).split("\n").filter(Boolean);
   const schwa = buildSchwaLines(words);
-  const ligature = buildLigatureLines();
+  schwa.forEach(assertChangeBeforeBreak);
 
-  const rules = mergeByKey([...patterns, ...exceptions.map(exceptionPattern), ...ligature, ...schwa]);
+  const rules = mergeByKey([...patterns, ...exceptions.map(exceptionPattern), ...schwa]);
 
   const scratch = await mkdtemp(join(tmpdir(), "vankatum-dic-"));
   try {
@@ -61,7 +61,7 @@ async function main() {
   }
   console.log(
     `dic: ${patterns.length} patterns + ${exceptions.length} exceptions + ` +
-      `${ligature.length} ligature + ${schwa.length} schwa rules -> ${dicPath}`,
+      `${schwa.length} schwa rules -> ${dicPath}`,
   );
 }
 

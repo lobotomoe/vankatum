@@ -62,7 +62,8 @@ What the engine gets right that patterns do not:
   `ա-ծան-ցյալ`, `բա-րև-ներ`).
 - **`և` before a vowel** has its syllable boundary *inside* the ligature
   (`Ե-րե-վան`), so the letter-preserving API places no break there
-  (`Ե-րևան`, never `Ե-րև-ան`); the `.dic` artifact spells out the `ե-վ` break.
+  (`Ե-րևան`, never `Ե-րև-ան`). No artifact carries the `ե-վ` break either:
+  LibreOffice cannot draw a break that changes letters on the next line.
 - **Intra-word marks** `՞ ՛ ՜ ՚` sit inside Armenian words (`ինչո՞ւ`) and are
   transparent: `hyphenateText("Ինչո՞ւ ես")` breaks `Ին-չո՞ւ`, keeping the mark
   on its vowel and the `ու` whole.
@@ -105,10 +106,9 @@ patterns are the keystone; the others derive from them.
 | `hyphenation.hy.json` | hypher and the JS ecosystem | `new Hypher(patterns)` — see below. |
 | `hyph-hy.{pat,chr,hyp}.txt` | Chromium / Android (Minikin) | The `.hyb` input trio. Build with `mk_hyb_file.py hyph-hy.pat.txt hyph-hy.hyb`. |
 
-The `.dic` is the only artifact that carries the two **character-changing**
-breaks — the epenthetic schwa (`գրել -> գը-րել`) and the `և` ligature spelled out
-before a vowel (`Երևան -> Ե-րե-վան`) — because only libhyphen's non-standard
-hyphenation can express them. Every build runs the `.dic` through the real
+The `.dic` is the only artifact that carries the **character-changing** break of
+the epenthetic schwa (`գրել -> գը-րել`), because only libhyphen's non-standard
+hyphenation can express it. Every build runs the `.dic` through the real
 libhyphen (as LibreOffice calls it), the `.tex` through LuaTeX and the `.json`
 through hypher, and fails unless each reproduces the engine on the whole corpus.
 

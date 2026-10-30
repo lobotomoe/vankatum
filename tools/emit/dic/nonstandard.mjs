@@ -2,16 +2,14 @@
  * Character-changing breaks as libhyphen NON-STANDARD hyphenation rules.
  *
  * Liang patterns are letter-preserving, so the .tex/.json/.hyb artifacts cannot
- * express the two Armenian breaks that change letters:
+ * write the epenthetic ը inside a vowelless consonant cluster (գրել -> գը-րել,
+ * հնդստան -> հըն-/հնդըս-). libhyphen's NON-STANDARD hyphenation can (it changes
+ * characters at the break), so these rules go into hyph_hy_AM.dic only
+ * (assembled by ./build.mjs).
  *
- *   - the epenthetic ը written inside a vowelless consonant cluster
- *     (գրել -> գը-րել, հնդստան -> հըն-/հնդըս-), and
- *   - the ligature և split before a vowel (Երևան -> Ե-րե-վան): the syllable
- *     boundary lies between its ե and վ, so the ligature is spelled out.
- *
- * libhyphen's NON-STANDARD hyphenation can (it changes characters at the break),
- * so these rule sets go into hyph_hy_AM.dic only (assembled by ./build.mjs). Format (see
- * SOURCES.md §F):
+ * The other letter-changing break, և spelled out before a vowel (Ե-րե-վան), is
+ * deliberately absent: it changes text AFTER the break, and LibreOffice Writer
+ * cannot render that (see assertChangeBeforeBreak). Format (see SOURCES.md §F):
  *
  *     <pattern>/<replacement>,<start>,<cut>
  *
@@ -21,10 +19,9 @@
  * libhyphen by tools/emit/e2e/.
  */
 
-import { syllabifyWithSchwa, EASTERN } from "../../../dist/index.js";
+import { syllabifyWithSchwa } from "../../../dist/index.js";
 
 const SCHWA = "ը";
-const LIGATURE = "և";
 /** Max Liang level: beats every inhibiting pattern patgen may have learned at the gap. */
 const PRIORITY = 9;
 
@@ -81,12 +78,30 @@ export function buildSchwaLines(words) {
 }
 
 /**
- * Ligature rules. և before a vowel is always /ev/ + vowel with the վ as the next
- * syllable's onset (single consonant between vowels), so the break is ե-վ and
- * the rule is safe as a LOCAL pattern: one line per vowel that can follow և
- * (ու starts with ո). The engine's letter-preserving mode emits no break there
- * at all, so these rules add the break rather than moving one.
+ * Refuse a rule that changes letters after its break. LibreOffice Writer
+ * (SvxGetAltSpelling, editeng/source/misc/unolingu.cxx) places the whole
+ * replacement before the hyphen and keeps the original letters after it, so the
+ * text after "=" must be exactly the word's own letters there. Every
+ * non-standard rule LibreOffice ships fits (asz-szony, till-lata); a rule like
+ * և9ա/ե=վա,1,2 does not, and Writer draws Երեվ-ան instead of Ե-րե-վան.
  */
-export function buildLigatureLines() {
-  return [...EASTERN.vowels].map((vowel) => `${LIGATURE}${PRIORITY}${vowel}/ե=վ,1,1`);
+export function assertChangeBeforeBreak(rule) {
+  const match = /^([^/]+)\/([^,]*)=([^,]*),(\d+),(\d+)$/u.exec(rule);
+  if (match === null) throw new Error(`not a non-standard rule: ${rule}`);
+  const [, pattern, , after, start, cut] = match;
+  const letters = [];
+  let breakAt;
+  for (const ch of pattern) {
+    if (/\d/u.test(ch)) {
+      if (Number(ch) % 2 === 1) breakAt = letters.length;
+    } else if (ch !== ".") {
+      letters.push(ch);
+    }
+  }
+  if (breakAt === undefined) throw new Error(`no break in non-standard rule: ${rule}`);
+  const cutEnd = Number(start) - 1 + Number(cut);
+  const original = letters.slice(breakAt, cutEnd).join("");
+  if (after !== original) {
+    throw new Error(`rule changes letters after its break (LibreOffice cannot render it): ${rule}`);
+  }
 }
