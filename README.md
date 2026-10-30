@@ -6,13 +6,13 @@
 Armenian hyphenation that gets consonant clusters right, for websites, LibreOffice
 and LaTeX.
 
-| Word | Existing patterns (via hypher) | vankatum |
-|---|---|---|
-| կանգնել | կանգնել (no break) | կանգ-նել |
-| աշխատանք | աշխա-տանք | աշ-խա-տանք |
-| բուրժուական | բուրժուա-կան | բուր-ժու-ա-կան |
-| Երևան | Երև-ան (wrong) | Ե-րևան |
-| գրել, in LibreOffice | գրել (no break) | գը-րել |
+| Word                 | Existing patterns (via hypher) | vankatum       |
+| -------------------- | ------------------------------ | -------------- |
+| կանգնել              | կանգնել (no break)             | կանգ-նել       |
+| աշխատանք             | աշխա-տանք                      | աշ-խա-տանք     |
+| բուրժուական          | բուրժուա-կան                   | բուր-ժու-ա-կան |
+| Երևան                | Երև-ան (wrong)                 | Ե-րևան         |
+| գրել, in LibreOffice | գրել (no break)                | գը-րել         |
 
 Every Armenian hyphenator in use today (TeX, hypher, Hyphenopoly, Chromium,
 Android) runs on the same 1,428 patterns, which know two rules: break before a
@@ -24,13 +24,13 @@ program it is meant for.
 
 ## Pick your tool
 
-| You use | What to get | Status |
-|---|---|---|
-| A website or web app | the npm package, or `hyphenation.hy.json` for hypher | tested in Chromium, Firefox, WebKit on macOS |
-| LibreOffice Writer | [`vankatum-hy.oxt`](https://github.com/lobotomoe/vankatum/releases/latest/download/vankatum-hy.oxt) | tested in LibreOffice 26.8 |
-| LaTeX (LuaLaTeX) | [`hyph-hy.tex`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph-hy.tex) | tested with babel |
-| Adobe InDesign (macOS) | the install script + [`hyph_hy_AM.dic`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph_hy_AM.dic) | **not yet tested in InDesign** |
-| Microsoft Word, Pages, Google Docs | nothing yet | these apps do not accept a custom hyphenation dictionary |
+| You use                            | What to get                                                                                                            | Status                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| A website or web app               | the npm package, or `hyphenation.hy.json` for hypher                                                                   | tested in Chromium, Firefox, WebKit on macOS             |
+| LibreOffice Writer                 | [`vankatum-hy.oxt`](https://github.com/lobotomoe/vankatum/releases/latest/download/vankatum-hy.oxt)                    | tested in LibreOffice 26.8                               |
+| LaTeX (LuaLaTeX)                   | [`hyph-hy.tex`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph-hy.tex)                            | tested with babel                                        |
+| Adobe InDesign (macOS)             | the install script + [`hyph_hy_AM.dic`](https://github.com/lobotomoe/vankatum/releases/latest/download/hyph_hy_AM.dic) | **not yet tested in InDesign**                           |
+| Microsoft Word, Pages, Google Docs | nothing yet                                                                                                            | these apps do not accept a custom hyphenation dictionary |
 
 All files are attached to every [release](https://github.com/lobotomoe/vankatum/releases/latest).
 
@@ -140,23 +140,28 @@ CommonJS, `require("vankatum")` works on Node 20.19+ / 22.12+; older Node needs
 `import()`.
 
 ```ts
-import { hyphenate, syllabify, hyphenateText, syllabifyWithSchwa } from "vankatum";
+import {
+  hyphenate,
+  syllabify,
+  hyphenateText,
+  syllabifyWithSchwa,
+} from "vankatum";
 
-hyphenate("կանգնել");       // "կանգ-նել"
-hyphenate("բուրժուական");   // "բուր-ժու-ա-կան"  (ու kept whole)
-syllabify("աշակերտ");       // ["ա", "շա", "կերտ"]
-hyphenateText("Ինչո՞ւ ես");  // soft hyphen in Ին|չո՞ւ, the mark stays on its vowel
+hyphenate("կանգնել"); // "կանգ-նել"
+hyphenate("բուրժուական"); // "բուր-ժու-ա-կան"  (ու kept whole)
+syllabify("աշակերտ"); // ["ա", "շա", "կերտ"]
+hyphenateText("Ինչո՞ւ ես"); // soft hyphen in Ին|չո՞ւ, the mark stays on its vowel
 syllabifyWithSchwa("գրել"); // ["գը", "րել"]  (spelling form, adds ը)
 ```
 
 `hyphenate`, `syllabify` and `breakPoints` take `{ leftmin, rightmin, hyphen, variant }`:
 
-| Option     | Default      | Meaning                                  |
-|------------|--------------|------------------------------------------|
-| `leftmin`  | `1`          | Minimum letters before the first break |
-| `rightmin` | `2`          | Minimum letters after the last break |
-| `hyphen`   | `"-"`        | String inserted at each break (`hyphenate` only) |
-| `variant`  | `"eastern"`  | `"eastern"` (reformed spelling) or `"western"` (classical) |
+| Option     | Default     | Meaning                                                    |
+| ---------- | ----------- | ---------------------------------------------------------- |
+| `leftmin`  | `1`         | Minimum letters before the first break                     |
+| `rightmin` | `2`         | Minimum letters after the last break                       |
+| `hyphen`   | `"-"`       | String inserted at each break (`hyphenate` only)           |
+| `variant`  | `"eastern"` | `"eastern"` (reformed spelling) or `"western"` (classical) |
 
 `hyphenateText` always uses the soft hyphen and takes `{ leftmin, rightmin, variant }`.
 Invalid options throw a `RangeError`. Removing the inserted hyphens always gives
@@ -205,7 +210,7 @@ Classical (Mashtotsian) spelling is supported by the engine with
 
 ```ts
 hyphenate("Սարգսեան", { variant: "western" }); // "Սարգ-սեան"  (եա is one sound)
-hyphenate("Սարգսեան");                           // "Սարգ-սե-ան"
+hyphenate("Սարգսեան"); // "Սարգ-սե-ան"
 ```
 
 The Western test set is provisional until a native speaker reviews it, and there
