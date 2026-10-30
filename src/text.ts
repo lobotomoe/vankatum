@@ -13,7 +13,7 @@ import { isArmenianLetter, isArmenianWordMark } from "./alphabet.js";
 import { hyphenate, type HyphenateOptions } from "./hyphenate.js";
 
 /** U+00AD: invisible unless the renderer breaks the line here. */
-export const SOFT_HYPHEN = "­";
+export const SOFT_HYPHEN = "\u00AD";
 
 /** Text-mode options. The separator is fixed to the soft hyphen, so {@link HyphenateOptions.hyphen} is not accepted. */
 export type TextOptions = Omit<HyphenateOptions, "hyphen">;

@@ -208,3 +208,9 @@ fits their build. The trio + `mk_hyb_file.py` are vendored under `tools/emit/`.
   used `[ա-ֆ]`, which stops one codepoint short of the ligature `և` (U+0587) and
   silently dropped or split every `և` word (0 of 84k), so no pattern ever learned
   a `և` context. Fixed and re-harvested 2026-09-05: 1,702 `և` words of 87,452.
+  The same harvesters also split words at the intra-word marks `՞ ՛ ՜ ՚`
+  (`ինչո՞ւ` → `ինչո` + `ւ`, `իհա՛րկե` → `իհա` + `րկե`), leaving fragments in
+  the 2026-09-05 snapshot (e.g. 15 words starting with `ւ`, `-ությո` stems).
+  Fixed 2026-10-17 (`tools/corpus/words.mjs` keeps the marks inside the word and
+  strips them, matching the engine); the committed snapshot still carries the
+  fragments until the next re-harvest.
