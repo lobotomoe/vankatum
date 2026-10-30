@@ -124,6 +124,14 @@ applies only to an **epenthetic** schwa followed by a syllable that begins with 
 stop/affricate — a written `ը` (`շը…`) and a following vowel or sonorant
 (սը-րահ) are untouched.
 
+**Proper names keep the cluster.** The same RA order exempts proper names that
+begin with these clusters: no `ը` is written and the cluster stays whole
+(Ստե-փան, never Ըս-տեփան). Capitalisation is the only signal of a proper name the
+engine has, so a capitalised word (Ստեփան, ՍՏԱՆԱԼ) keeps its initial sibilant +
+stop as one onset. A sentence-initial common noun (Ստանալ) therefore loses its
+`Ըս-` break — a missed break, which is invisible, rather than a wrong one.
+An all-caps word that does take a schwa gets a capital `Ը` (ԳԸ-ՐԵԼ).
+
 ### Output: character-changing breaks — a separate mode (ADR)
 
 A schwa break **writes `ը`** at line end + next-line start (հետաքըր-քըրվել) but the

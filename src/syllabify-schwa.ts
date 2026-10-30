@@ -10,10 +10,12 @@
  * hyphenate.ts.
  */
 
-import { stripWordMarks, tokenize, type Unit } from "./alphabet.js";
+import { isArmenianUppercase, stripWordMarks, tokenize, type Unit } from "./alphabet.js";
 import { resolveOrthography, type Variant } from "./orthography.js";
 
 const SCHWA = "ը";
+/** The schwa written into an all-caps word (ԳԸ-ՐԵԼ). */
+const SCHWA_UPPER = "Ը";
 
 /**
  * Word-final ք (the old plural / case suffix) is an appendix: it closes any coda
@@ -58,7 +60,7 @@ function extendsCoda(inner: Unit, coda: readonly Unit[]): boolean {
   return sonority(inner.text) > sonority(innermost.text);
 }
 
-function syllabifyUnits(units: readonly Unit[]): string[] {
+function syllabifyUnits(units: readonly Unit[], schwa: string): string[] {
   const syllables: string[] = [];
   let i = units.length - 1;
 
@@ -94,7 +96,7 @@ function syllabifyUnits(units: readonly Unit[]): string[] {
         i--;
       }
     } else {
-      nucleus = SCHWA;
+      nucleus = schwa;
       epenthetic = true;
       if (cur !== undefined && cur.kind === "consonant") {
         onset.unshift(cur);
@@ -112,7 +114,14 @@ function syllabifyUnits(units: readonly Unit[]): string[] {
     const atWordStart = i < 0 || (units[i] as Unit).kind === "separator";
     const flip =
       epenthetic && atWordStart && codaText === "" && isSibilantBeforeStop(onsetText, syllables[0]);
-    syllables.unshift(flip ? SCHWA + onsetText : onsetText + nucleus + codaText);
+    const next = syllables[0];
+    if (flip && next !== undefined && isArmenianUppercase(onsetText)) {
+      // A capitalised word is taken as a proper name: the cluster stays whole and
+      // no ը is written (Ստե-փան, never Ըս-տեփան). See docs/SPEC.md.
+      syllables[0] = onsetText + next;
+    } else {
+      syllables.unshift(flip ? schwa + onsetText : onsetText + nucleus + codaText);
+    }
   }
 
   return syllables;
@@ -152,7 +161,7 @@ function reattachMarks(
         const to = origin[k + 1] ?? original.length;
         text += ch + original.slice(at + 1, to).join("");
         k++;
-      } else if (ch === SCHWA) {
+      } else if (ch === SCHWA || ch === SCHWA_UPPER) {
         text += ch; // an inserted ը
       } else {
         throw new Error(`syllables of "${word}" do not align with its letters at "${ch}"`);
@@ -162,6 +171,11 @@ function reattachMarks(
   });
 }
 
+/** Two or more letters, every one uppercase: the inserted schwa must be Ը too. */
+function isAllCaps(chars: readonly string[]): boolean {
+  return chars.length >= 2 && chars.every(isArmenianUppercase);
+}
+
 /**
  * Syllabify a single Armenian word, inserting ը where the pronunciation requires
  * an epenthetic schwa. Letters other than the inserted ը are preserved; intra-word
@@ -169,7 +183,8 @@ function reattachMarks(
  */
 export function syllabifyWithSchwa(word: string, variant?: Variant): string[] {
   const { chars, origin } = stripWordMarks(word);
-  const syllables = syllabifyUnits(tokenize(chars.join(""), resolveOrthography(variant)));
+  const schwa = isAllCaps(chars) ? SCHWA_UPPER : SCHWA;
+  const syllables = syllabifyUnits(tokenize(chars.join(""), resolveOrthography(variant)), schwa);
   if (syllables.length === 0) return [word];
   if (origin.length === [...word].length) return syllables;
   return reattachMarks(word, chars, origin, syllables);
