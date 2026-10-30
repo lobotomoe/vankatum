@@ -143,11 +143,10 @@ exceptions cannot memorise them — this is pure pattern generalisation,
 reproducible with `node tools/emit/holdout.mjs`.
 
 **Character-changing breaks — `.dic` only.** Liang patterns are letter-preserving,
-so two Armenian breaks can only be expressed by libhyphen's **non-standard
-hyphenation**: the epenthetic ը written at a break inside a vowelless cluster
-(`գրել → գը-րել`, `սկիզբ → ըս-կիզբ`) and the ligature `և` spelled out before a
-vowel (`Երևան → Ե-րե-վան`). `tools/emit/dic/nonstandard.mjs` builds both rule
-sets and `tools/emit/dic/build.mjs` assembles them into `hyph_hy_AM.dic`. Two
+so the epenthetic ը written at a break inside a vowelless cluster
+(`գրել → գը-րել`, `սկիզբ → ըս-կիզբ`) can only be expressed by libhyphen's
+**non-standard hyphenation**. `tools/emit/dic/nonstandard.mjs` builds the rules
+and `tools/emit/dic/build.mjs` assembles them into `hyph_hy_AM.dic`. Two
 libhyphen properties shape the assembly: at each letter it applies only the
 pattern of the one automaton state it reached (hence `substrings.pl`, which folds
 every embedded pattern into its container), and `substrings.pl` carries a rule's
@@ -161,11 +160,24 @@ single-schwa-break words are emitted. Result over the 87k corpus (2026-09-05):
 **0 spurious ը on 65,767 non-schwa words; 100% of 18,685 single-break schwa words
 covered; 3,000 words (13.8% of schwa words — several breaks, or a schwa only in
 the last syllable) defer to the runtime engine** (safe under-hyphenation). Schwa
-correctness is bounded by the engine's schwa syllabifier (87.3% vs gold). The
-ligature rules are seven **local** patterns `և9V/ե=վ,1,1` (one per vowel): `ևV`
-is always /ev/ + vowel with the վ as the next onset, so the rule cannot misfire.
-`.tex` / `.json` / `.hyb` carry neither break (the engine labels no break at
-`ևV`, so patgen learns to inhibit it there).
+correctness is bounded by the engine's schwa syllabifier (87.3% vs gold).
+
+**No `ե-վ` break in any artifact.** The ligature `և` before a vowel splits as
+`Ե-րե-վան`, which changes text *after* the break. LibreOffice Writer cannot
+render that: `SvxGetAltSpelling` (`editeng/source/misc/unolingu.cxx`) puts the
+whole replacement before the hyphen and keeps the word's own letters after it,
+so a rule `և9ա/ե=վա,1,2` comes out as `Երեվ-ան`, whatever its cut (seen in
+Writer 26.8 PDF output, 2026-10-31). Every non-standard rule LibreOffice ships
+changes only the left side (`asz-szony`, `till-lata`), and
+`assertChangeBeforeBreak` refuses any other kind at build time. Words with `ևV`
+are therefore not broken there (safe under-hyphenation); `.tex` / `.json` /
+`.hyb` never carried the break (the engine labels no break at `ևV`, so patgen
+learns to inhibit it).
+
+**Checked in LibreOffice itself.** Besides the libhyphen gate, the `.oxt` was
+installed into Writer 26.8.2 and 1,658 corpus words were rendered to PDF in
+columns of three widths: 3,626 line breaks, none outside the breaks the `.dic`
+allows (2026-10-31). This check is manual; it is not part of CI.
 
 **.hyb is best-effort.** Chromium's Minikin trie packs each node into a 32-bit
 word, so it cannot hold a pattern set as diverse as the one our ~87k-word corpus
