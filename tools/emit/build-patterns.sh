@@ -8,7 +8,7 @@
 # (.dic, .hyb, hypher .json) derive from it, and the last step runs every
 # artifact through its real consumer. See docs/SOURCES.md §F.
 #
-# Requires: node, npm, perl, a C compiler, git, luatex, and pypatgen
+# Requires: node, npm, perl, zip, a C compiler, git, luatex, and pypatgen
 # (pip install pypatgen). Override the binary
 # with PYPATGEN=/path/to/pypatgen for CI.
 set -euo pipefail
@@ -57,13 +57,16 @@ rm -f "$raw"
 echo "[4/6] verify reproduction vs engine"
 node tools/emit/verify.mjs "$TEX" "$DICT"
 
-echo "[5/6] derive downstream artifacts (.json, Minikin trio, .dic, .hyb)"
+echo "[5/6] derive downstream artifacts (.json, Minikin trio, .dic, .oxt, .hyb)"
 node tools/emit/derive.mjs "$TEX" "$OUT_DIR"
 # The libhyphen .dic: patterns + exceptions as whole-word patterns + the
 # character-changing breaks (written schwa, և -> ե-վ before a vowel) as
 # non-standard rules, run through upstream's substrings.pl. See
 # tools/emit/dic/build.mjs and docs/SOURCES.md §F.
 node tools/emit/dic/build.mjs "$TEX" "$OUT_DIR/hyph_hy_AM.dic"
+# The same .dic as a LibreOffice extension: official LibreOffice builds load
+# hyphenation dictionaries only from extensions.
+node tools/emit/oxt.mjs "$OUT_DIR/hyph_hy_AM.dic" "$OUT_DIR/vankatum-hy.oxt"
 # .hyb is best-effort: Chromium's Minikin trie packs into 32-bit words, so a very
 # large pattern set legitimately overflows it. Skip (don't fail the release) when
 # it does — .tex/.json/.dic carry the full set regardless.
