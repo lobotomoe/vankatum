@@ -2,11 +2,10 @@
  * Downstream emitters — derive the ecosystem artifacts from the keystone
  * hyph-hy.tex (the engine-generated Liang patterns + exceptions):
  *
- *   hyph_hy_AM.dic       libhyphen / Hunspell  (Adobe InDesign, LibreOffice,
- *                        OpenOffice, Scribus, Firefox). Patterns only.
  *   hyphenation.hy.json  hypher / JS ecosystem. Patterns (bucketed by char
  *                        length) + exceptions, for exact reproduction.
  *
+ * The libhyphen .dic needs more than a format change; see ./dic/build.mjs.
  * See docs/SOURCES.md §F. The Chromium .hyb is produced separately by the AOSP
  * mk_hyb_file.py tool fed with hyph-hy.tex.
  *
@@ -15,24 +14,22 @@
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { parseTex } from "./tex.mjs";
+import { parseTex, RENDER_MINIMA } from "./tex.mjs";
 
-const LEFTMIN = 1;
-const RIGHTMIN = 2;
-
-/** libhyphen / Hunspell dictionary: UTF-8 header + minima + bare patterns. */
-function toDic(patterns) {
-  return ["UTF-8", `LEFTHYPHENMIN ${LEFTMIN}`, `RIGHTHYPHENMIN ${RIGHTMIN}`, ...patterns].join("\n") + "\n";
-}
+/** hypher pads each word with "_", not TeX's ".", before matching patterns. */
+const HYPHER_BOUNDARY = "_";
+/** hypher marks the breaks of an exception with U+2027 HYPHENATION POINT. */
+const HYPHER_POINT = "\u2027";
 
 /**
  * hypher pattern object. `patterns[k]` is every pattern of total length k
  * (letters + digits) concatenated; hypher slices each bucket into k-char chunks.
- * `exceptions` is a space-separated list of hyphen-marked words.
+ * `exceptions` is a ", "-separated list of words with U+2027 at each break.
  */
 function toHypher(patterns, exceptions) {
   const buckets = new Map();
-  for (const pattern of patterns) {
+  for (const texPattern of patterns) {
+    const pattern = texPattern.replaceAll(".", HYPHER_BOUNDARY);
     const len = [...pattern].length;
     const bucket = buckets.get(len) ?? [];
     bucket.push(pattern);
@@ -44,10 +41,10 @@ function toHypher(patterns, exceptions) {
   }
   return {
     id: "hy",
-    leftmin: LEFTMIN,
-    rightmin: RIGHTMIN,
+    leftmin: RENDER_MINIMA.leftmin,
+    rightmin: RENDER_MINIMA.rightmin,
     patterns: patternsObj,
-    exceptions: exceptions.join(" "),
+    exceptions: exceptions.map((marked) => marked.replaceAll("-", HYPHER_POINT)).join(", "),
   };
 }
 
@@ -90,9 +87,6 @@ async function main() {
   if (patterns.length === 0) throw new Error("no patterns parsed from " + texPath);
   await mkdir(outDir, { recursive: true });
 
-  const dicPath = join(outDir, "hyph_hy_AM.dic");
-  await writeFile(dicPath, toDic(patterns), "utf8");
-
   const jsonPath = join(outDir, "hyphenation.hy.json");
   await writeFile(jsonPath, JSON.stringify(toHypher(patterns, exceptions)) + "\n", "utf8");
 
@@ -102,7 +96,6 @@ async function main() {
   await writeFile(join(outDir, "hyph-hy.hyp.txt"), toHypTxt(exceptions), "utf8");
 
   console.log(`patterns: ${patterns.length}  exceptions: ${exceptions.length}`);
-  console.log(`-> ${dicPath}`);
   console.log(`-> ${jsonPath}`);
   console.log(`-> ${join(outDir, "hyph-hy.{pat,chr,hyp}.txt")} (Minikin trio for .hyb)`);
 }

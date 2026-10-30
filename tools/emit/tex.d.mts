@@ -8,3 +8,12 @@ export interface TexBlocks {
 export function parseTex(tex: string): TexBlocks;
 
 export function offsetsFromMarked(marked: string): number[];
+
+export interface Minima {
+  leftmin: number;
+  rightmin: number;
+}
+
+export const RENDER_MINIMA: Minima;
+
+export function applyMinima(marked: string, minima?: Minima): string;
