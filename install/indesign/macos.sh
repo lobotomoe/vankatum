@@ -53,6 +53,12 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
+# An uninstalled InDesign can leave its support folder behind without the app.
+if [ ! -d "$INDESIGN/$(basename "$INDESIGN").app" ]; then
+  echo "error: $INDESIGN has no $(basename "$INDESIGN").app (InDesign is not installed there)" >&2
+  exit 1
+fi
+
 SOURCE="${1:-}"
 if [ -z "$SOURCE" ]; then
   SOURCE="$(mktemp -t hyph_hy_AM)"
