@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 #
-# Install (or remove) the vankatum Armenian hyphenation dictionary in Adobe
-# InDesign on macOS. InDesign's Hunspell provider has no Armenian, so this adds
-# the hy_AM locale to the provider's language list and puts hyph_hy_AM.dic
-# where the provider looks for it. Quit InDesign first; run with sudo (the
-# InDesign folder belongs to root).
+# Remove the vankatum Armenian hyphenation dictionary that vankatum 0.2.3
+# installed into Adobe InDesign on macOS: restores the Hunspell plugin's
+# Info.plist from its backup and deletes the hy_AM folder. Quit InDesign first;
+# run with sudo (the InDesign folder belongs to root).
 #
-#   sudo ./macos.sh [path/to/hyph_hy_AM.dic]   install (downloads the latest
-#                                              release when no path is given)
-#   sudo ./macos.sh --uninstall                restore the original state
+#   sudo ./macos.sh --uninstall
+#
+# Installing is disabled (see below).
 #
 # Set INDESIGN to pick an installation other than the newest one found.
 set -euo pipefail
@@ -29,7 +28,8 @@ if [ -z "$INDESIGN" ] || [ ! -d "$INDESIGN/$PLUGIN_REL" ]; then
   echo "error: no Adobe InDesign with a Hunspell provider found (set INDESIGN=/Applications/Adobe InDesign 20XX)" >&2
   exit 1
 fi
-if pgrep -f "$INDESIGN/" >/dev/null; then
+# Match the app's own executable: its crash reporter stays resident after a quit.
+if pgrep -f "$INDESIGN/$(basename "$INDESIGN").app/Contents/MacOS/$(basename "$INDESIGN")\$" >/dev/null; then
   echo "error: quit InDesign first" >&2
   exit 1
 fi
@@ -52,6 +52,12 @@ if [ "${1:-}" = "--uninstall" ]; then
   echo "removed Armenian hyphenation from $INDESIGN"
   exit 0
 fi
+
+# Installing is disabled: Info.plist is sealed by the plugin's code signature,
+# and once it is edited InDesign 2026 hyphenates no Hunspell language at all
+# (English included). Only --uninstall, which restores the original file, runs.
+echo "error: installing is disabled, it breaks hyphenation in InDesign 2026 (see README)" >&2
+exit 1
 
 # An uninstalled InDesign can leave its support folder behind without the app.
 if [ ! -d "$INDESIGN/$(basename "$INDESIGN").app" ]; then
