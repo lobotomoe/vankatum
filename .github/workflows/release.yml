@@ -52,6 +52,7 @@ jobs:
           path: |
             artifacts/hyph-hy.tex
             artifacts/hyph_hy_AM.dic
+            artifacts/vankatum-hy.oxt
             artifacts/hyphenation.hy.json
             artifacts/hyph-hy.hyb
             artifacts/hyph-hy.pat.txt
@@ -65,6 +66,7 @@ jobs:
           files: |
             artifacts/hyph-hy.tex
             artifacts/hyph_hy_AM.dic
+            artifacts/vankatum-hy.oxt
             artifacts/hyphenation.hy.json
             artifacts/hyph-hy.hyb
             artifacts/hyph-hy.pat.txt
